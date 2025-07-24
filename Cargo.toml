@@ -8,8 +8,7 @@ license = "GPL-3.0"
 repository = "https://github.com/akinoiro/ssh-list"
 categories = [
     "command-line-utilities",
-    "development-tools",
-    "system-utilities",
+    "development-tools"
 ]
 keywords = ["tui", "ssh"]
 readme = "README.md"
