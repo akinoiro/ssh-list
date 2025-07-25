@@ -16,8 +16,18 @@ Download the latest binary from the [Releases page](https://github.com/akinoiro/
 
 #### To run the `ssh-list` command from any terminal:
 
-Linux / macOS:
+Linux:
 ```
+# Make the binary executable
+chmod +x ssh-list
+# Move it to a directory in your PATH
+sudo mv ssh-list /usr/local/bin/
+```
+
+macOS:
+```
+# Manually grant permission to run the binary
+xattr -d com.apple.quarantine ssh-list
 # Make the binary executable
 chmod +x ssh-list
 # Move it to a directory in your PATH
