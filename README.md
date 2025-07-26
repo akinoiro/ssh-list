@@ -4,9 +4,8 @@
 SSH connection manager with a TUI interface.
 
 Key Features:
-- Add, edit, and delete connections.
-- Sort your list of hosts.
-- Specify options for each connection.
+- Add, edit, delete, and sort connections.
+- Support for custom SSH options.
 - This application does not store passwords. For secure authentication, use SSH keys.
 
 ## Prerequisites
@@ -14,7 +13,7 @@ You must have an OpenSSH client installed on your system.
 ## Install from GitHub Release
 Download the latest binary from the [Releases page](https://github.com/akinoiro/ssh-list/releases).
 
-#### To run the `ssh-list` command from any terminal:
+#### To run the `ssh-list` command from terminal:
 
 Linux:
 ```
@@ -26,7 +25,7 @@ sudo mv ssh-list /usr/local/bin/
 
 macOS:
 ```
-# Manually grant permission to run the binary
+# Grant permission to run the binary
 xattr -d com.apple.quarantine ssh-list
 # Make the binary executable
 chmod +x ssh-list
@@ -35,9 +34,8 @@ sudo mv ssh-list /usr/local/bin/
 ```
 
 Windows:
-1.  Download and extract the `.zip` archive.
-2.  Move `ssh-list.exe` to a permanent folder (e.g., `C:\Program Files\ssh-list`).
-3.  Add that folder's location to your system's `PATH` environment variable.
+1.  Move `ssh-list.exe` to a `C:\Program Files\ssh-list`.
+2.  Add folder's location to your system's `PATH` environment variable.
 
 ## Install from crates.io
 ```
