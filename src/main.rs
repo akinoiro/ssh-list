@@ -177,16 +177,19 @@ impl App {
                 "Connecting to {} ({})...",
                 self.ssh_connections[i].server_name, self.ssh_connections[i].group_name
             );
-            Command::new("ssh")
-                .arg(format!("-p {}", self.ssh_connections[i].port))
-                .arg(format!(
-                    "{}@{}",
-                    self.ssh_connections[i].username, self.ssh_connections[i].hostname
-                ))
-                .args(split(&self.ssh_connections[i].options).unwrap_or_default())
-                .status()
-                .expect("ssh not found: please install OpenSSH client");
-            std::process::exit(0);
+            match Command::new("ssh")
+                .arg("-p")
+                .arg(&self.ssh_connections[i].port)
+                .arg(format!("{}@{}",self.ssh_connections[i].username, self.ssh_connections[i].hostname))
+                .args(split(&self.ssh_connections[i].options).unwrap_or_default()).status() {
+                    Ok(_) => std::process::exit(0),
+                    Err(text) => {
+                        eprintln!("Error: Failed to execute ssh command.");
+                        eprintln!("Details: {}", text);
+                        eprintln!("Is OpenSSH installed?");
+                        std::process::exit(1);
+                }
+            }
         }
     }
 
@@ -221,7 +224,14 @@ impl App {
 
     fn update_config(&mut self) {
         let json = serde_json::to_string_pretty(&self.ssh_connections).unwrap();
-        fs::write(get_config_path(), json).unwrap();
+        match fs::write(get_config_path(), json) {
+            Ok(_) => (),
+            Err(text) => {
+                ratatui::restore();
+                eprintln!("Error writing to file {}: {}", get_config_path(), text);
+                std::process::exit(1);
+            }
+        };
     }
 
     fn selected_config_to_fields(&mut self) {
@@ -312,18 +322,43 @@ impl App {
 }
 
 fn get_config_path() -> String {
-    let mut config_dir_pathbuf = env::home_dir().expect("homedir detect error");
+    let mut config_dir_pathbuf = match env::home_dir() {
+        Some(path) => path,
+        None => {
+            ratatui::restore();
+            eprintln!("Error: Could not find the home directory.");
+            std::process::exit(1);
+        }
+    };
     config_dir_pathbuf.push(".ssh");
     let config_dir_path = config_dir_pathbuf.display().to_string();
-    fs::create_dir_all(&config_dir_path).unwrap();
+    match fs::create_dir_all(&config_dir_path) {
+        Ok(_) => (),
+        Err(text) => {
+            ratatui::restore();
+            eprintln!("{}: {}", config_dir_path, text);
+            std::process::exit(1);
+        }
+    };
     let config_path = config_dir_path + "/ssh-list.json";
     config_path
 }
 
 fn read_config() -> Vec<SSHConnection> {
     let config_path = get_config_path();
-    let file_data: String = fs::read_to_string(config_path).unwrap_or_default();
-    serde_json::from_str(&file_data).unwrap_or_default()
+    let file_data: String = fs::read_to_string(&config_path).unwrap_or_default();
+    if file_data.is_empty() {
+        return Vec::new();
+    }
+    match serde_json::from_str(&file_data) {
+        Ok(data) => data,
+        Err(text) => {
+            ratatui::restore();
+            eprintln!("Error: Configuration file is invalid. Check the syntax in {}", &config_path);
+            eprintln!("Details: {}", text);
+            std::process::exit(1);
+        }
+    }
 }
 
 pub fn popup_area(area: Rect) -> Rect {

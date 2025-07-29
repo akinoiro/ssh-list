@@ -90,7 +90,7 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
         app,
         frame,
         rects_popup[6],
-        " SSH option (e.g., -D 1337) ",
+        " SSH options (e.g., -D 1337) ",
         &app.field_inputs.options_input,
         Focus::OptionsField,
     );
@@ -126,10 +126,26 @@ pub fn render_scrollbar(app: &mut App, frame: &mut Frame, area: Rect) {
     );
 }
 
+fn get_constraint(app: &App) -> Vec<Constraint> {
+    let server_name_len = app.ssh_connections.iter().map(|i| i.server_name.len()).max().unwrap_or(0);
+    let group_name_len = app.ssh_connections.iter().map(|i| i.group_name.len()).max().unwrap_or(0);
+    let username_len = app.ssh_connections.iter().map(|i| i.username.len()).max().unwrap_or(0);
+    let hostname_len = app.ssh_connections.iter().map(|i| i.hostname.len()).max().unwrap_or(0);
+
+    vec![
+            Constraint::Length(server_name_len.clamp(15, 30) as u16),
+            Constraint::Length(group_name_len.clamp(15, 30) as u16),
+            Constraint::Length(username_len.clamp(15, 30) as u16),
+            Constraint::Length(hostname_len.clamp(15, 50) as u16),
+            Constraint::Length(10), //port
+            Constraint::Min(10),    //options
+        ]
+}
+
 pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
     let header_style = Style::default().fg(Color::Gray).bg(Color::Indexed(235));
     let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow);
-    let header = [" Name", " Group", " Username", " Hostname", " Port", " Option"]
+    let header = [" Name", " Group", " Username", " Hostname", " Port", " Options"]
         .into_iter()
         .map(Cell::from)
         .collect::<Row>()
@@ -149,14 +165,7 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
     });
     let t = Table::new(
         rows,
-        [
-            Constraint::Min(15),
-            Constraint::Min(10),
-            Constraint::Min(10),
-            Constraint::Min(15),
-            Constraint::Min(6),
-            Constraint::Min(10),
-        ],
+        get_constraint(&app),
     )
     .header(header)
     .row_highlight_style(selected_row_style)
