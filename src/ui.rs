@@ -6,7 +6,6 @@ use ratatui::{
     text::Text,
     widgets::{Block, BorderType, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
 };
-use tui_input::Input;
 
 pub fn render_input(app: &App, frame: &mut Frame, area: Rect, title: &str, selected_input: &Input, focused: Focus) {
     let width = area.width.max(3) - 3;
@@ -26,8 +25,7 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
     let title_text = match app.app_mode {
         AppMode::New => " Add new connection ",
         AppMode::Edit => " Edit connection ",
-        AppMode::Move => "",
-        AppMode::Normal => "",
+        _ => "",
     };
 
     let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
@@ -98,10 +96,12 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
 
 pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
     let footer_text = match app.app_mode {
-        AppMode::Normal => "[Enter] - connect | [A] - add | [E] - edit | [Del] - delete | [M] - move | [Esc] - quit",
+        AppMode::Normal => "[Enter] - connect | [A] - add | [E] - edit | [Del] - delete | [M] - move | [C] - config | [Esc] - quit",
         AppMode::New => "[Enter] - save | [Esc] - cancel",
         AppMode::Edit => "[Enter] - save | [Esc] - cancel",
         AppMode::Move => "[↓] - move down | [↑] - move up | [Esc] - back",
+        AppMode::ImportExport => "[I] - import | [Esc] - back",
+        AppMode::Error => "[Esc] - back",
     };
 
     let info_footer = Paragraph::new(footer_text)
@@ -172,4 +172,55 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
     .bg(Color::Black)
     .highlight_spacing(HighlightSpacing::Always);
     frame.render_stateful_widget(t, area, &mut app.table_state);
+}
+
+pub fn render_config_popup(frame: &mut Frame, area: Rect) {
+    let title_text = " Config Settings ";
+    let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
+    let area = config_popup_area(area);
+    let inner = popup_block.inner(area);
+    frame.render_widget(Clear, area);
+    frame.render_widget(popup_block, area);
+
+    let vertical_popup = &Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Length(2), // text1
+        Constraint::Length(1),
+        Constraint::Length(2), // text2
+    ]);
+    let rects_popup = vertical_popup.split(inner);
+
+    let text1 = format!("Press [I] to import connections from:\n{}",parse::get_sshconfig_path().display());
+    let info_footer = Paragraph::new(text1)
+        .style(Style::new().fg(Color::White))
+        .centered();
+    frame.render_widget(info_footer, rects_popup[1]);
+
+    let text2 = "Username, hostname, port, and \nidentity file will be imported";
+    let info_footer = Paragraph::new(text2)
+        .style(Style::new().fg(Color::White))
+        .centered();
+    frame.render_widget(info_footer, rects_popup[3]);
+}
+
+pub fn render_error_popup(frame: &mut Frame, area: Rect, error_text: String) {
+    let title_text = " Error ";
+    let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
+    let area = error_popup_area(area);
+    let inner = popup_block.inner(area);
+    frame.render_widget(Clear, area);
+    frame.render_widget(popup_block, area);
+
+    let vertical_popup = &Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Length(2),
+    ]);
+    let rects_popup = vertical_popup.split(inner);
+
+    let text1 = format!("{}",error_text);
+    let info_footer = Paragraph::new(text1)
+        .style(Style::new().fg(Color::White))
+        .centered();
+    frame.render_widget(info_footer, rects_popup[1]);
+
 }

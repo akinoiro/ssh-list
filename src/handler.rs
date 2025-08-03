@@ -5,11 +5,34 @@ use tui_input::backend::crossterm::EventHandler;
 pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
     match app.app_mode {
         AppMode::Normal => match key.code {
-            KeyCode::Esc => return false,
+            KeyCode::Esc => {
+                ratatui::restore();
+                execute!(stdout(), Show).ok();
+                return false
+            }
             KeyCode::Down | KeyCode::Tab => app.next_row(),
             KeyCode::Up | KeyCode::BackTab => app.previous_row(),
-            KeyCode::Enter => app.connect(),
-            KeyCode::Delete => app.delete_connection(),
+            KeyCode::Enter => {
+                if check_openssh() {
+                    ratatui::restore();
+                    execute!(stdout(), Show).ok();
+                    app.connect();
+                    return false
+                } else {
+                    app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
+                    app.show_config_popup = false;
+                    app.show_error_popup = true;
+                    app.app_mode = AppMode::Error;                    
+                }
+            },
+            KeyCode::Delete => {
+                app.delete_connection();
+                app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
+            },
+            KeyCode::Char('c') | KeyCode::Char('C') | KeyCode::Char('с') | KeyCode::Char('С') => {
+                app.show_config_popup = true;
+                app.app_mode = AppMode::ImportExport;
+            }
             KeyCode::Char('m') | KeyCode::Char('M') | KeyCode::Char('ь') | KeyCode::Char('Ь') => app.app_mode = AppMode::Move,
             KeyCode::Char('e') | KeyCode::Char('E') | KeyCode::Char('у') | KeyCode::Char('У') => {
                 app.app_mode = AppMode::Edit;
@@ -27,6 +50,8 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             KeyCode::Enter => {
                 app.add_connection();
                 app.app_mode = AppMode::Normal;
+                app.show_popup = false;
+                app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
             }
             KeyCode::Esc => {
                 app.show_popup = false;
@@ -59,6 +84,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             KeyCode::Enter => {
                 app.update_connection();
                 app.app_mode = AppMode::Normal;
+                app.show_popup = false;
             }
             KeyCode::Esc => {
                 app.show_popup = false;
@@ -100,6 +126,41 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             }
             _ => {}
         },
+        AppMode::ImportExport =>  match key.code {
+            KeyCode::Char('i') | KeyCode::Char('I') | KeyCode::Char('ш') | KeyCode::Char('Ш')  => {
+                if !parse::check_blank_sshconfig() {
+                    if check_openssh() {
+                        parse::import_config(app);
+                        app.show_config_popup = false;
+                        app.app_mode = AppMode::Normal;
+                        app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
+                    } else {
+                        app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
+                        app.show_config_popup = false;
+                        app.show_error_popup = true;
+                        app.app_mode = AppMode::Error;                    
+                    }
+                } else {
+                    app.error_text = "The config is empty or does not exist.".to_string();
+                    app.show_config_popup = false;
+                    app.show_error_popup = true;
+                    app.app_mode = AppMode::Error;
+                }
+                
+            }
+            KeyCode::Esc => {
+                app.show_config_popup = false;
+                app.app_mode = AppMode::Normal;
+            }
+            _ => {}
+        }
+        AppMode::Error =>  match key.code {
+            KeyCode::Esc => {
+                app.show_error_popup = false;
+                app.app_mode = AppMode::Normal;
+            }
+            _ => {}
+        }
     }
     true
 }

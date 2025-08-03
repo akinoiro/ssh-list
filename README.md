@@ -3,10 +3,12 @@
 
 SSH connection manager with a TUI interface.
 
-Key Features:
-- Add, edit, delete, and sort connections.
+Key features:
+- Add, edit, and sort connections.
 - Support for custom SSH options.
-- This application does not store passwords. For secure authentication, use SSH keys.
+- Import hosts from ~/.ssh/config.
+
+This application does not store passwords. For secure authentication, use SSH keys.
 
 ## Prerequisites
 You must have an OpenSSH client installed on your system.

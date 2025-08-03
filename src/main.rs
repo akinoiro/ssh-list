@@ -1,7 +1,10 @@
 mod handler;
+mod parse;
 mod ui;
 
 use color_eyre::Result;
+use crossterm::execute;
+use crossterm::cursor::Show;
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyEventKind},
@@ -10,8 +13,10 @@ use ratatui::{
 };
 use serde::{Deserialize, Serialize};
 use shlex::split;
-use std::process::Command;
 use std::{env, fs};
+use std::io::stdout;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use tui_input::Input;
 
 fn main() -> Result<()> {
@@ -22,7 +27,7 @@ fn main() -> Result<()> {
     app_result
 }
 
-#[derive(Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq)]
 pub struct SSHConnection {
     server_name: String,
     group_name: String,
@@ -69,6 +74,8 @@ pub enum AppMode {
     Edit,
     New,
     Move,
+    ImportExport,
+    Error
 }
 
 pub struct App {
@@ -76,9 +83,12 @@ pub struct App {
     ssh_connections: Vec<SSHConnection>,
     scroll_state: ScrollbarState,
     show_popup: bool,
+    show_config_popup: bool,
+    show_error_popup: bool,
     focus: Focus,
     field_inputs: FieldInputs,
     app_mode: AppMode,
+    error_text: String
 }
 
 impl App {
@@ -89,6 +99,8 @@ impl App {
             scroll_state: ScrollbarState::new(data_vec.len()),
             ssh_connections: data_vec,
             show_popup: false,
+            show_config_popup: false,
+            show_error_popup: false,
             focus: Focus::ServerNameField,
             field_inputs: FieldInputs {
                 server_name_input: Input::default(),
@@ -99,6 +111,7 @@ impl App {
                 options_input: Input::default(),
             },
             app_mode: AppMode::Normal,
+            error_text: String::new()
         }
     }
 
@@ -132,14 +145,30 @@ impl App {
         if self.show_popup {
             ui::render_popup(self, frame, rects_v[0]);
         }
+
+        if self.show_config_popup {
+            ui::render_config_popup(frame, rects_v[0]);
+        }
+
+        if self.show_error_popup {
+            ui::render_error_popup(frame, rects_v[0], self.error_text.clone());
+        }
     }
 
     fn check_blank_config(&mut self) {
-        if self.ssh_connections == vec![] {
+        if self.ssh_connections == vec![] && parse::check_blank_sshconfig() == true {
             self.show_popup = true;
             self.app_mode = AppMode::New
+        } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig() == false {
+            self.show_config_popup = true;
+            self.app_mode = AppMode::ImportExport
+        } else if self.ssh_connections != vec![] && parse::check_blank_sshconfig() == true {
+            self.app_mode = AppMode::Normal;
+        } else if self.ssh_connections != vec![] && parse::check_blank_sshconfig() == false {
+            self.app_mode = AppMode::Normal;
         }
     }
+
     fn next_row(&mut self) {
         let i = match self.table_state.selected() {
             Some(i) => {
@@ -172,7 +201,6 @@ impl App {
 
     fn connect(&mut self) {
         if let Some(i) = self.table_state.selected() {
-            ratatui::restore();
             println!(
                 "Connecting to {} ({})...",
                 self.ssh_connections[i].server_name, self.ssh_connections[i].group_name
@@ -204,10 +232,8 @@ impl App {
         };
         self.ssh_connections.push(new_connection);
         self.update_config();
-        self.show_popup = false;
-        self.scroll_state = self.scroll_state.content_length(self.ssh_connections.len());
         self.reset_fields();
-        self.table_state = TableState::default().with_selected(self.ssh_connections.len());
+        self.next_row();
     }
 
     fn reset_fields(&mut self) {
@@ -222,13 +248,14 @@ impl App {
         self.focus = Focus::ServerNameField;
     }
 
-    fn update_config(&mut self) {
+    pub fn update_config(&mut self) {
         let json = serde_json::to_string_pretty(&self.ssh_connections).unwrap();
         match fs::write(get_config_path(), json) {
             Ok(_) => (),
             Err(text) => {
                 ratatui::restore();
-                eprintln!("Error writing to file {}: {}", get_config_path(), text);
+                execute!(stdout(), Show).ok();
+                eprintln!("Error writing to file {}: {}", get_config_path().display(), text);
                 std::process::exit(1);
             }
         };
@@ -237,11 +264,11 @@ impl App {
     fn selected_config_to_fields(&mut self) {
         if let Some(i) = self.table_state.selected() {
             self.field_inputs.server_name_input = Input::default().with_value(self.ssh_connections[i].server_name.to_string());
-            self.field_inputs.group_name_input = Input::default().with_value(self.ssh_connections[i].group_name.to_string());
-            self.field_inputs.username_input = Input::default().with_value(self.ssh_connections[i].username.to_string());
-            self.field_inputs.hostname_input = Input::default().with_value(self.ssh_connections[i].hostname.to_string());
-            self.field_inputs.port_input = Input::default().with_value(self.ssh_connections[i].port.to_string());
-            self.field_inputs.options_input = Input::default().with_value(self.ssh_connections[i].options.to_string());
+            self.field_inputs.group_name_input  = Input::default().with_value(self.ssh_connections[i].group_name.to_string());
+            self.field_inputs.username_input    = Input::default().with_value(self.ssh_connections[i].username.to_string());
+            self.field_inputs.hostname_input    = Input::default().with_value(self.ssh_connections[i].hostname.to_string());
+            self.field_inputs.port_input        = Input::default().with_value(self.ssh_connections[i].port.to_string());
+            self.field_inputs.options_input     = Input::default().with_value(self.ssh_connections[i].options.to_string());
         };
     }
 
@@ -259,7 +286,6 @@ impl App {
             self.table_state = TableState::default().with_selected(i);
         }
         self.update_config();
-        self.show_popup = false;
         self.reset_fields();
     }
 
@@ -268,7 +294,6 @@ impl App {
             self.ssh_connections.remove(i);
             self.update_config();
         };
-        self.scroll_state = self.scroll_state.content_length(self.ssh_connections.len());
     }
 
     fn focus_next_field(&mut self) {
@@ -321,12 +346,13 @@ impl App {
     }
 }
 
-fn get_config_path() -> String {
+fn get_config_path() -> PathBuf {
     let mut config_dir_pathbuf = match env::home_dir() {
         Some(path) => path,
         None => {
             ratatui::restore();
             eprintln!("Error: Could not find the home directory.");
+            execute!(stdout(), Show).ok();
             std::process::exit(1);
         }
     };
@@ -337,11 +363,12 @@ fn get_config_path() -> String {
         Err(text) => {
             ratatui::restore();
             eprintln!("{}: {}", config_dir_path, text);
+            execute!(stdout(), Show).ok();
             std::process::exit(1);
         }
     };
-    let config_path = config_dir_path + "/ssh-list.json";
-    config_path
+    config_dir_pathbuf.push("ssh-list.json");
+    config_dir_pathbuf
 }
 
 fn read_config() -> Vec<SSHConnection> {
@@ -354,8 +381,9 @@ fn read_config() -> Vec<SSHConnection> {
         Ok(data) => data,
         Err(text) => {
             ratatui::restore();
-            eprintln!("Error: Configuration file is invalid. Check the syntax in {}", &config_path);
+            eprintln!("Error: Configuration file is invalid. Check the syntax in {}", &config_path.display());
             eprintln!("Details: {}", text);
+            execute!(stdout(), Show).ok();
             std::process::exit(1);
         }
     }
@@ -367,4 +395,31 @@ pub fn popup_area(area: Rect) -> Rect {
     let [area] = vertical.areas(area);
     let [area] = horizontal.areas(area);
     area
+}
+
+pub fn config_popup_area(area: Rect) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(9)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Length(46)]).flex(Flex::Center);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
+}
+
+pub fn error_popup_area(area: Rect) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(6)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Length(46)]).flex(Flex::Center);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
+}
+
+fn check_openssh() -> bool {
+    match Command::new("ssh")
+    .arg("-v")
+    .stdout(Stdio::null())
+    .stderr(Stdio::null())
+    .status() {
+        Ok(_) => true,
+        Err(_) => false
+    }
 }
