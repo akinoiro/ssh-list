@@ -43,6 +43,10 @@ Windows:
 ```
 cargo install ssh-list
 ```
+## Install from AUR (Arch Linux)
+```
+paru -S ssh-list
+```
 ## Build from source
 You will need Rust and Cargo installed.
 ```
