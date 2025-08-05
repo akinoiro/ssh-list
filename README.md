@@ -47,6 +47,12 @@ cargo install ssh-list
 ```
 paru -S ssh-list
 ```
+## Install from PPA (Ubuntu, Linux Mint)
+```
+sudo add-apt-repository ppa:akinoiro/ssh-list
+sudo apt update
+sudo apt install ssh-list
+```
 ## Build from source
 You will need Rust and Cargo installed.
 ```
