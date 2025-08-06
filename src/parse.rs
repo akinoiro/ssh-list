@@ -101,7 +101,7 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
             .arg(name)
             .output()
             .expect("Error");
-        let output = str::from_utf8(&output.stdout).expect("Error");
+        let output = std::str::from_utf8(&output.stdout).expect("Error");
 
         let mut connection = SSHConfigConnection {
             server_name: name.to_string(),
