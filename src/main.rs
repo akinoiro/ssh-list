@@ -2,7 +2,6 @@ mod handler;
 mod parse;
 mod ui;
 
-use color_eyre::Result;
 use crossterm::execute;
 use crossterm::cursor::Show;
 use ratatui::{
@@ -19,8 +18,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tui_input::Input;
 
-fn main() -> Result<()> {
-    color_eyre::install()?;
+fn main() -> std::io::Result<()> {
     let terminal = ratatui::init();
     let app_result = App::new().run(terminal);
     ratatui::restore();
@@ -115,7 +113,7 @@ impl App {
         }
     }
 
-    fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
+    fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
         self.check_blank_config();
         loop {
             terminal.draw(|frame| self.draw(frame))?;
