@@ -30,6 +30,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
             },
             KeyCode::Char('c') | KeyCode::Char('C') | KeyCode::Char('с') | KeyCode::Char('С') => {
+                app.copy_connection();
+                app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
+            },
+            KeyCode::Char('i') | KeyCode::Char('I') | KeyCode::Char('ш') | KeyCode::Char('Ш') => {
                 app.show_config_popup = true;
                 app.app_mode = AppMode::ImportExport;
             }

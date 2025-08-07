@@ -96,12 +96,12 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
 
 pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
     let footer_text = match app.app_mode {
-        AppMode::Normal => "[Enter] - connect | [A] - add | [E] - edit | [Del] - delete | [M] - move | [C] - config | [Esc] - quit",
-        AppMode::New => "[Enter] - save | [Esc] - cancel",
-        AppMode::Edit => "[Enter] - save | [Esc] - cancel",
-        AppMode::Move => "[↓] - move down | [↑] - move up | [Esc] - back",
-        AppMode::ImportExport => "[I] - import | [Esc] - back",
-        AppMode::Error => "[Esc] - back",
+        AppMode::Normal => "[Enter] connect | [A] add | [E] edit | [C] copy | [Del] delete | [M] move | [I] import | [Esc] quit",
+        AppMode::New => "[Enter] save | [Esc] cancel",
+        AppMode::Edit => "[Enter] save | [Esc] cancel",
+        AppMode::Move => "[↓] move down | [↑] move up | [Esc] back",
+        AppMode::ImportExport => "[I] import | [Esc] back",
+        AppMode::Error => "[Esc] back",
     };
 
     let info_footer = Paragraph::new(footer_text)

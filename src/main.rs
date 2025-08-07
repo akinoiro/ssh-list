@@ -25,7 +25,7 @@ fn main() -> std::io::Result<()> {
     app_result
 }
 
-#[derive(Deserialize, Serialize, PartialEq)]
+#[derive(Deserialize, Serialize, PartialEq, Clone)]
 pub struct SSHConnection {
     server_name: String,
     group_name: String,
@@ -160,9 +160,7 @@ impl App {
         } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig() == false {
             self.show_config_popup = true;
             self.app_mode = AppMode::ImportExport
-        } else if self.ssh_connections != vec![] && parse::check_blank_sshconfig() == true {
-            self.app_mode = AppMode::Normal;
-        } else if self.ssh_connections != vec![] && parse::check_blank_sshconfig() == false {
+        } else if self.ssh_connections != vec![] {
             self.app_mode = AppMode::Normal;
         }
     }
@@ -290,6 +288,13 @@ impl App {
     fn delete_connection(&mut self) {
         if let Some(i) = self.table_state.selected() {
             self.ssh_connections.remove(i);
+            self.update_config();
+        };
+    }
+
+    fn copy_connection (&mut self) {
+        if let Some(i) = self.table_state.selected() {
+            self.ssh_connections.insert(i+1, self.ssh_connections[i].clone());
             self.update_config();
         };
     }
