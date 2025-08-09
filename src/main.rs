@@ -264,6 +264,7 @@ impl App {
         self.update_config();
         self.reset_fields();
         self.next_row();
+        self.table_state.select(Some(self.ssh_connections.len()));
     }
 
     fn reset_fields(&mut self) {
