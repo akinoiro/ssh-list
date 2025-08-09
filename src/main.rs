@@ -65,6 +65,7 @@ pub enum Focus {
     HostnameField,
     PortField,
     OptionsField,
+    RunField
 }
 
 pub enum AppMode {
@@ -73,7 +74,8 @@ pub enum AppMode {
     New,
     Move,
     ImportExport,
-    Error
+    Error,
+    RunCommand,
 }
 
 pub struct App {
@@ -83,8 +85,10 @@ pub struct App {
     show_popup: bool,
     show_config_popup: bool,
     show_error_popup: bool,
+    show_run_popup: bool,
     focus: Focus,
     field_inputs: FieldInputs,
+    run_input: Input,
     app_mode: AppMode,
     error_text: String
 }
@@ -99,6 +103,7 @@ impl App {
             show_popup: false,
             show_config_popup: false,
             show_error_popup: false,
+            show_run_popup: false,
             focus: Focus::ServerNameField,
             field_inputs: FieldInputs {
                 server_name_input: Input::default(),
@@ -108,6 +113,7 @@ impl App {
                 port_input: Input::default().with_value("22".to_string()),
                 options_input: Input::default(),
             },
+            run_input: Input::default(),
             app_mode: AppMode::Normal,
             error_text: String::new()
         }
@@ -150,6 +156,11 @@ impl App {
 
         if self.show_error_popup {
             ui::render_error_popup(frame, rects_v[0], self.error_text.clone());
+        }
+
+        if self.show_run_popup {
+            self.focus = Focus::RunField;
+            ui::render_run_popup(self, frame, rects_v[0]);
         }
     }
 
@@ -206,6 +217,29 @@ impl App {
                 .arg(&self.ssh_connections[i].port)
                 .arg(format!("{}@{}",self.ssh_connections[i].username, self.ssh_connections[i].hostname))
                 .args(split(&self.ssh_connections[i].options).unwrap_or_default()).status() {
+                    Ok(_) => std::process::exit(0),
+                    Err(text) => {
+                        eprintln!("Error: Failed to execute ssh command.");
+                        eprintln!("Details: {}", text);
+                        eprintln!("Is OpenSSH installed?");
+                        std::process::exit(1);
+                }
+            }
+        }
+    }
+
+    fn run_command(&mut self, command: String) {
+        if let Some(i) = self.table_state.selected() {
+            let options_args = format!("{} {}", self.ssh_connections[i].options.clone(), command);
+            println!(
+                "Connecting to {} ({})...",
+                self.ssh_connections[i].server_name, self.ssh_connections[i].group_name
+            );
+            match Command::new("ssh")
+                .arg("-p")
+                .arg(&self.ssh_connections[i].port)
+                .arg(format!("{}@{}",self.ssh_connections[i].username, self.ssh_connections[i].hostname))
+                .args(split(options_args.as_str()).unwrap_or_default()).status() {
                     Ok(_) => std::process::exit(0),
                     Err(text) => {
                         eprintln!("Error: Failed to execute ssh command.");
@@ -307,6 +341,7 @@ impl App {
             Focus::HostnameField => Focus::PortField,
             Focus::PortField => Focus::OptionsField,
             Focus::OptionsField => Focus::OptionsField,
+            _ => Focus::ServerNameField
         };
     }
 
@@ -318,6 +353,7 @@ impl App {
             Focus::HostnameField => Focus::UsernameField,
             Focus::PortField => Focus::HostnameField,
             Focus::OptionsField => Focus::PortField,
+            _ => Focus::ServerNameField
         };
     }
 
@@ -411,6 +447,14 @@ pub fn config_popup_area(area: Rect) -> Rect {
 pub fn error_popup_area(area: Rect) -> Rect {
     let vertical = Layout::vertical([Constraint::Length(6)]).flex(Flex::Center);
     let horizontal = Layout::horizontal([Constraint::Length(46)]).flex(Flex::Center);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
+}
+
+pub fn run_popup_area(area: Rect) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(3)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Length(50)]).flex(Flex::Center);
     let [area] = vertical.areas(area);
     let [area] = horizontal.areas(area);
     area

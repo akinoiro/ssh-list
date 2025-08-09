@@ -4,8 +4,9 @@
 SSH connection manager with a TUI interface.
 
 Key features:
-- Add, edit, and sort connections.
+- Add, edit, copy, and sort connections.
 - Support for custom SSH options.
+- Execute commands on remote hosts.
 - Import hosts from ~/.ssh/config.
 
 This application does not store passwords. For secure authentication, use SSH keys.

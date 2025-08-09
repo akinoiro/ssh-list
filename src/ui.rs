@@ -96,12 +96,13 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
 
 pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
     let footer_text = match app.app_mode {
-        AppMode::Normal => "[Enter] connect | [A] add | [E] edit | [C] copy | [Del] delete | [M] move | [I] import | [Esc] quit",
+        AppMode::Normal => "[Enter] connect | [A] add | [E] edit | [C] copy | [Del] delete | [M] move | [R] run | [I] import | [Esc] quit",
         AppMode::New => "[Enter] save | [Esc] cancel",
         AppMode::Edit => "[Enter] save | [Esc] cancel",
         AppMode::Move => "[↓] move down | [↑] move up | [Esc] back",
         AppMode::ImportExport => "[I] import | [Esc] back",
         AppMode::Error => "[Esc] back",
+        AppMode::RunCommand => "[Esc] back | [Enter] run command",
     };
 
     let info_footer = Paragraph::new(footer_text)
@@ -223,4 +224,19 @@ pub fn render_error_popup(frame: &mut Frame, area: Rect, error_text: String) {
         .centered();
     frame.render_widget(info_footer, rects_popup[1]);
 
+}
+
+pub fn render_run_popup(app: &mut App, frame: &mut Frame, area: Rect) {
+    let popup_block = Block::new();
+    frame.render_widget(Clear, run_popup_area(area));
+    frame.render_widget(popup_block, run_popup_area(area));
+
+    render_input(
+        app,
+        frame,
+        run_popup_area(area),
+        " Command (e.g., uptime) ",
+        &app.run_input,
+        Focus::RunField,
+    );
 }

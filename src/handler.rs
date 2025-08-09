@@ -32,6 +32,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             KeyCode::Char('c') | KeyCode::Char('C') | KeyCode::Char('с') | KeyCode::Char('С') => {
                 app.copy_connection();
                 app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
+                app.next_row();
             },
             KeyCode::Char('i') | KeyCode::Char('I') | KeyCode::Char('ш') | KeyCode::Char('Ш') => {
                 app.show_config_popup = true;
@@ -47,6 +48,11 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.app_mode = AppMode::New;
                 app.reset_fields();
                 app.show_popup = true;
+            }
+            KeyCode::Char('r') | KeyCode::Char('R') | KeyCode::Char('к') | KeyCode::Char('К') => {
+                app.app_mode = AppMode::RunCommand;
+                app.reset_fields();
+                app.show_run_popup = true;
             }
             _ => {}
         },
@@ -82,6 +88,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 Focus::OptionsField => {
                     app.field_inputs.options_input.handle_event(&Event::Key(key));
                 }
+                _ => ()
             },
         },
         AppMode::Edit => match key.code {
@@ -115,6 +122,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 Focus::OptionsField => {
                     app.field_inputs.options_input.handle_event(&Event::Key(key));
                 }
+                _ => ()
             },
         },
         AppMode::Move => match key.code {
@@ -164,6 +172,33 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.app_mode = AppMode::Normal;
             }
             _ => {}
+        }
+        AppMode::RunCommand =>  match key.code {
+            KeyCode::Esc => {
+                app.show_run_popup = false;
+                app.app_mode = AppMode::Normal;
+                app.run_input = Input::default();
+                app.focus = Focus::ServerNameField;
+            }
+            KeyCode::Enter => {
+                if check_openssh() {
+                    ratatui::restore();
+                    execute!(stdout(), Show).ok();
+                    app.run_command(app.run_input.to_string());
+                    return false
+                } else {
+                    app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
+                    app.show_config_popup = false;
+                    app.show_error_popup = true;
+                    app.app_mode = AppMode::Error;                    
+                }
+            },
+            _ => match app.focus {
+                Focus::RunField => {
+                    app.run_input.handle_event(&Event::Key(key));
+                }
+                _ => ()
+            }
         }
     }
     true
