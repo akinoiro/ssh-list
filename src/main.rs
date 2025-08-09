@@ -263,7 +263,6 @@ impl App {
         self.ssh_connections.push(new_connection);
         self.update_config();
         self.reset_fields();
-        self.next_row();
         self.table_state.select(Some(self.ssh_connections.len()));
     }
 
