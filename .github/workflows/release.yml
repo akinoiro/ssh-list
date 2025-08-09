@@ -103,14 +103,16 @@ jobs:
         shell: bash
         run: |
           BINARY_NAME="${{ env.BIN_NAME }}"
+          VERSION="${{ github.ref_name }}"
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            ARCHIVE_NAME="${BINARY_NAME}-${{ matrix.target }}.zip"
+            ARCHIVE_NAME="${BINARY_NAME}-${VERSION}-${{ matrix.target }}.zip"
             powershell -Command "Compress-Archive -Path 'target/${{ matrix.target }}/release/${BINARY_NAME}.exe' -DestinationPath '${ARCHIVE_NAME}'"
           else
-            ARCHIVE_NAME="${BINARY_NAME}-${{ matrix.target }}.tar.gz"
+            ARCHIVE_NAME="${BINARY_NAME}-${VERSION}-${{ matrix.target }}.tar.gz"
             tar -czf "${ARCHIVE_NAME}" -C "target/${{ matrix.target }}/release" "${BINARY_NAME}"
           fi
           echo "archive_path=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
+          
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
