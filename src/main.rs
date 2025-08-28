@@ -65,9 +65,11 @@ pub enum Focus {
     HostnameField,
     PortField,
     OptionsField,
-    RunField
+    RunField,
+    SearchField,
 }
 
+#[derive(PartialEq)]
 pub enum AppMode {
     Normal,
     Edit,
@@ -76,6 +78,7 @@ pub enum AppMode {
     ImportExport,
     Error,
     RunCommand,
+    Search,
 }
 
 pub struct App {
@@ -89,7 +92,10 @@ pub struct App {
     focus: Focus,
     field_inputs: FieldInputs,
     run_input: Input,
+    search_input: Input,
+    search_index: Vec<usize>,
     app_mode: AppMode,
+    last_app_mode: AppMode,
     error_text: String
 }
 
@@ -114,8 +120,11 @@ impl App {
                 options_input: Input::default(),
             },
             run_input: Input::default(),
+            search_input: Input::default(),
+            search_index: vec![],
             app_mode: AppMode::Normal,
-            error_text: String::new()
+            last_app_mode: AppMode::Normal,
+            error_text: String::new(),
         }
     }
 
@@ -136,7 +145,18 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(3)]);
+
+        let vertical= match self.app_mode {
+            AppMode::Search => Layout::vertical([Constraint::Min(5), Constraint::Length(3), Constraint::Length(3)]),
+            AppMode::Normal => if self.ssh_connections.is_empty() {
+                Layout::vertical([Constraint::Min(5), Constraint::Length(3)])
+            }
+            else {
+                Layout::vertical([Constraint::Min(5), Constraint::Length(4)])
+            }
+            _ => Layout::vertical([Constraint::Min(5), Constraint::Length(3)]),
+        };
+        
         let rects_v = vertical.split(frame.area());
 
         let horizontal = Layout::horizontal([Constraint::Min(0), Constraint::Length(3)]);
@@ -144,7 +164,14 @@ impl App {
 
         ui::render_table(self, frame, rects_h[0]);
         ui::render_scrollbar(self, frame, rects_h[1]);
-        ui::render_footer(self, frame, rects_v[1]);
+
+        match self.app_mode {
+            AppMode::Search => {
+                ui::render_search(self, frame, rects_v[1]);
+                ui::render_footer(self, frame, rects_v[2]);
+            }
+            _ => ui::render_footer(self, frame, rects_v[1])
+        }
 
         if self.show_popup {
             ui::render_popup(self, frame, rects_v[0]);
@@ -207,7 +234,7 @@ impl App {
     }
 
     fn connect(&mut self) {
-        if let Some(i) = self.table_state.selected() {
+        if let Some(i) = self.get_row_index() {
             println!(
                 "Connecting to {} ({})...",
                 self.ssh_connections[i].server_name, self.ssh_connections[i].group_name
@@ -229,8 +256,8 @@ impl App {
     }
 
     fn run_command(&mut self, command: String) {
-        if let Some(i) = self.table_state.selected() {
-            let options_args = format!("{} {}", self.ssh_connections[i].options.clone(), command);
+        if let Some(i) = self.get_row_index() {
+            let options_args = format!("{} {}", &self.ssh_connections[i].options, command);
             println!(
                 "Connecting to {} ({})...",
                 self.ssh_connections[i].server_name, self.ssh_connections[i].group_name
@@ -292,7 +319,7 @@ impl App {
     }
 
     fn selected_config_to_fields(&mut self) {
-        if let Some(i) = self.table_state.selected() {
+        if let Some(i) = self.get_row_index() {
             self.field_inputs.server_name_input = Input::default().with_value(self.ssh_connections[i].server_name.to_string());
             self.field_inputs.group_name_input  = Input::default().with_value(self.ssh_connections[i].group_name.to_string());
             self.field_inputs.username_input    = Input::default().with_value(self.ssh_connections[i].username.to_string());
@@ -311,16 +338,15 @@ impl App {
             port: self.field_inputs.port_input.to_string(),
             options: self.field_inputs.options_input.to_string(),
         };
-        if let Some(i) = self.table_state.selected() {
+        if let Some(i) = self.get_row_index() {
             self.ssh_connections[i] = edited_connection;
-            self.table_state = TableState::default().with_selected(i);
         }
         self.update_config();
         self.reset_fields();
     }
 
     fn delete_connection(&mut self) {
-        if let Some(i) = self.table_state.selected() {
+        if let Some(i) = self.get_row_index() {
             self.ssh_connections.remove(i);
             self.update_config();
         };
@@ -382,6 +408,40 @@ impl App {
             }
         }
         self.update_config()
+    }
+
+    pub fn search(&mut self) {
+        let search_input = self.search_input.to_string().to_lowercase();
+        self.search_index.clear();
+        for (index, connection) in self.ssh_connections.iter().enumerate() {
+            if connection.server_name.to_lowercase().contains(&search_input) ||
+                connection.hostname.to_lowercase().contains(&search_input) ||
+                connection.username.to_lowercase().contains(&search_input) ||
+                connection.port.to_lowercase().contains(&search_input) ||
+                connection.group_name.to_lowercase().contains(&search_input) ||
+                connection.options.to_lowercase().contains(&search_input) {
+                self.search_index.push(index);
+            }
+        }
+        let i = match self.table_state.selected() {
+            Some(i) => i,
+            None => 0,
+        };
+        self.table_state.select(Some(i));
+        self.scroll_state = self.scroll_state.position(i);
+
+    }
+
+    fn get_row_index(&self) -> Option<usize> {
+        let selected_row = match self.table_state.selected() {
+            Some(row) => row,
+            None => return None,
+        };
+        if self.app_mode == AppMode::Normal {
+            Some(selected_row)
+        } else {
+            self.search_index.get(selected_row).copied()
+        }
     }
 }
 
@@ -469,4 +529,12 @@ fn check_openssh() -> bool {
         Ok(_) => true,
         Err(_) => false
     }
+}
+
+pub fn search_area(area: Rect) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(3)]);
+    let horizontal = Layout::horizontal([Constraint::Percentage(100)]);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
 }

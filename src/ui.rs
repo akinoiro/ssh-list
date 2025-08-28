@@ -96,13 +96,20 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
 
 pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
     let footer_text = match app.app_mode {
-        AppMode::Normal => "[Enter] connect | [A] add | [E] edit | [C] copy | [Del] delete | [M] move | [R] run | [I] import | [Esc] quit",
+        AppMode::Normal => 
+            if app.ssh_connections.is_empty() {
+                "[A] add | [I] import | [Esc] quit"
+            }
+            else {
+                "[Enter] connect | [R] run  | [/] search | [I] import | [Esc] quit  \n    [A] add     | [E] edit | [C] copy   | [M] move   | [Del] delete"
+            }
         AppMode::New => "[Enter] save | [Esc] cancel",
         AppMode::Edit => "[Enter] save | [Esc] cancel",
         AppMode::Move => "[↓] move down | [↑] move up | [Esc] back",
         AppMode::ImportExport => "[I] import | [Esc] back",
         AppMode::Error => "[Esc] back",
-        AppMode::RunCommand => "[Esc] back | [Enter] run command",
+        AppMode::RunCommand => "[Enter] run command | [Esc] back",
+        AppMode::Search => "[Enter] connect | [Ctrl+R] run | [Ctrl+E] edit | [Del] delete | [Esc] back",
     };
 
     let info_footer = Paragraph::new(footer_text)
@@ -152,18 +159,40 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
         .collect::<Row>()
         .style(header_style)
         .height(1);
-    let rows = app.ssh_connections.iter().enumerate().map(|(i, data)| {
-        let color = match i % 2 {
-            0 => Color::Black,
-            _ => Color::Indexed(235),
-        };
-        let item = data.ref_array();
-        item.into_iter()
-            .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
-            .collect::<Row>()
-            .style(Style::new().fg(Color::White).bg(color))
-            .height(3)
-    });
+    let mut rows = Vec::new();
+    if app.app_mode == AppMode::Normal
+        || app.app_mode == AppMode::New
+        || app.app_mode == AppMode::Move
+        || app.app_mode == AppMode::ImportExport  {
+        for (i, data) in app.ssh_connections.iter().enumerate() {
+            let color = match i % 2 {
+                0 => Color::Black,
+                _ => Color::Indexed(235),
+            };
+            let item = data.ref_array();
+            let row = item.into_iter()
+                .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
+                .collect::<Row>()
+                .style(Style::new().fg(Color::White).bg(color))
+                .height(3);
+            rows.push(row);
+        }
+    } else {
+        for (i, &index) in app.search_index.iter().enumerate() {
+            let data = &app.ssh_connections[index];
+            let color = match i % 2 {
+                0 => Color::Black,
+                _ => Color::Indexed(235),
+            };
+            let item = data.ref_array();
+            let row = item.into_iter()
+                .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
+                .collect::<Row>()
+                .style(Style::new().fg(Color::White).bg(color))
+                .height(3);
+            rows.push(row);
+        }
+    }
     let t = Table::new(
         rows,
         get_constraint(&app),
@@ -238,5 +267,18 @@ pub fn render_run_popup(app: &mut App, frame: &mut Frame, area: Rect) {
         " Command (e.g., uptime) ",
         &app.run_input,
         Focus::RunField,
+    );
+}
+
+pub fn render_search(app: &mut App, frame: &mut Frame, area: Rect) {
+    let popup_block = Block::new();
+    frame.render_widget(popup_block, search_area(area));
+    render_input(
+        app,
+        frame,
+        search_area(area),
+        " Search ",
+        &app.search_input,
+        Focus::SearchField,
     );
 }

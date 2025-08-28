@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2025-08-28
+### Added
+- Search
+### Changed
+- Reorganized menu
+### Fixed
+- Minor bugs
+
 ## [1.2.0] - 2025-08-09
 ### Added
 - Connection copying
