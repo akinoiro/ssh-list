@@ -180,7 +180,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
         },
         AppMode::ImportExport =>  match key.code {
             KeyCode::Char('i'|'I'|'ш'|'Ш')  => {
-                if !parse::check_blank_sshconfig() {
+                if !parse::check_blank_sshconfig(&parse::get_sshconfig_path()) {
                     if check_openssh() {
                         parse::import_config(app);
                         app.show_config_popup = false;

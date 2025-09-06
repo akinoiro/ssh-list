@@ -192,10 +192,10 @@ impl App {
     }
 
     fn check_blank_config(&mut self) {
-        if self.ssh_connections == vec![] && parse::check_blank_sshconfig() == true {
+        if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == true {
             self.show_popup = true;
             self.app_mode = AppMode::New
-        } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig() == false {
+        } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == false {
             self.show_config_popup = true;
             self.app_mode = AppMode::ImportExport
         } else if self.ssh_connections != vec![] {

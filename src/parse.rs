@@ -1,6 +1,7 @@
 use crate::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use glob::glob;
 
 #[derive(PartialEq, Clone)]
 pub struct SSHConfigConnection {
@@ -12,20 +13,30 @@ pub struct SSHConfigConnection {
 }
 
 pub fn import_config(app: &mut App) {
-    let mut sshconfig: Vec<SSHConfigConnection> = Vec::new();
+    let mut sshconfig: Vec<SSHConfigConnection> = vec![];
     let default_output = vec!["default_output".to_string()];
     parse_from_ssh(default_output, &mut sshconfig);
     let default_output_object = sshconfig[0].clone();
     sshconfig.remove(0);
 
-    let config = load_config();
-    let names = get_names(config);
+    let mut ssh_config_pathes: Vec<PathBuf> = vec![];
+    let mut names: Vec<String> = vec![];
+    ssh_config_pathes.push(get_sshconfig_path());
+    let config = load_config(&ssh_config_pathes[0]);
+    get_includes(&mut ssh_config_pathes, config);
+    for ssh_config_path in ssh_config_pathes {
+        if !check_blank_sshconfig(&ssh_config_path) {
+            let config = load_config(&ssh_config_path);
+            get_names(&mut names, config);
+        }
+    }
     parse_from_ssh(names, &mut sshconfig);
 
     compare_with_defaults(&mut sshconfig, default_output_object);
     add_to_appconfig(sshconfig,app);
     App::update_config(app);
-
+    app.table_state.select(Some(app.ssh_connections.len()));
+    app.scroll_state = app.scroll_state.position(app.ssh_connections.len());
 }
 
 pub fn get_sshconfig_path() -> PathBuf {
@@ -53,8 +64,7 @@ pub fn get_sshconfig_path() -> PathBuf {
     config_dir_pathbuf
 }
 
-pub fn check_blank_sshconfig() -> bool {
-    let config_path = get_sshconfig_path();
+pub fn check_blank_sshconfig(config_path: &PathBuf) -> bool {
     let file_data: String = fs::read_to_string(&config_path).unwrap_or_default();
     if file_data.trim().is_empty() {
         true
@@ -63,15 +73,13 @@ pub fn check_blank_sshconfig() -> bool {
     }
 }
 
-fn load_config() -> BufReader<File> {
-    let config_path = get_sshconfig_path();
+fn load_config(config_path: &PathBuf) -> BufReader<File> {
     let file_data = File::open(&config_path).unwrap();
     let reader: BufReader<File> = BufReader::new(file_data);
     reader
 }
 
-fn get_names(config: BufReader<File>) -> Vec<String> {
-    let mut ssh_names: Vec<String> = Vec::new();
+fn get_names(names: &mut Vec<String>, config: BufReader<File>) {
     for line_result in config.lines() {
         match line_result {
             Ok(line) => {
@@ -83,7 +91,7 @@ fn get_names(config: BufReader<File>) -> Vec<String> {
                     let line = line.split_whitespace();
                     for part in line {
                         if !part.contains("*") && part.to_lowercase() != "host" {
-                            ssh_names.push(part.to_string());
+                            names.push(part.to_string());
                         }
                     }
                 }
@@ -91,7 +99,6 @@ fn get_names(config: BufReader<File>) -> Vec<String> {
             Err(text) => eprintln!("Error config reading: {}", text),
         }
     }
-    ssh_names
 }
 
 fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) {
@@ -154,5 +161,51 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
             options: c.identityfile
         };
         app.ssh_connections.push(import);
+    }
+}
+
+fn get_includes(ssh_config_pathes: &mut Vec<PathBuf>, config: BufReader<File>) {
+    for line_result in config.lines() {
+        match line_result {
+            Ok(line) => {
+                let homedir = env::home_dir().unwrap();
+                let line = line.trim()
+                .replace("=", " ")
+                .replace("~", &homedir.display().to_string());
+                if !line.is_empty()
+                    && !line.starts_with('#')
+                    && line.to_lowercase().starts_with("include ")
+                {
+                    let line = line.split_whitespace();
+                    for part in line {
+                        if part.to_lowercase() != "include" {
+                            if part.starts_with("C:") || part.starts_with("/") {
+                                if part.contains("*") {
+                                    for entry in glob(part).expect("Failed to read glob pattern") {
+                                        match entry {
+                                            Ok(path) => ssh_config_pathes.push(PathBuf::from(path)),
+                                            Err(e) => println!("{:?}", e),
+                                        }
+                                    }
+                                }
+                                else {ssh_config_pathes.push(PathBuf::from(part))}
+                            } else if !part.starts_with("/") {
+                                let part = format!("{}/.ssh/{}", homedir.display(), part);
+                                if part.contains("*") {
+                                    for entry in glob(&part).expect("Failed to read glob pattern") {
+                                        match entry {
+                                            Ok(path) => ssh_config_pathes.push(PathBuf::from(path)),
+                                            Err(e) => println!("{:?}", e),
+                                        }
+                                    }
+                                }
+                                else {ssh_config_pathes.push(PathBuf::from(part))}
+                            }
+                        }
+                    }
+                }
+            }
+            Err(text) => eprintln!("Error config reading: {}", text),
+        }
     }
 }
