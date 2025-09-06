@@ -190,7 +190,7 @@ fn get_includes(ssh_config_paths: &mut Vec<PathBuf>, config: BufReader<File>) {
                                     }
                                 }
                                 else {ssh_config_paths.push(PathBuf::from(part))}
-                            } else if !part.starts_with("/") {
+                            } else if !Path::new(part).is_absolute() {
                                 let part = format!("{}/.ssh/{}", homedir.display(), part);
                                 if part.contains("*") {
                                     for entry in glob(&part).expect("Failed to read glob pattern") {
