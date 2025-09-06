@@ -2,6 +2,7 @@ use crate::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use glob::glob;
+use std::path::Path;
 
 #[derive(PartialEq, Clone)]
 pub struct SSHConfigConnection {
@@ -19,12 +20,12 @@ pub fn import_config(app: &mut App) {
     let default_output_object = sshconfig[0].clone();
     sshconfig.remove(0);
 
-    let mut ssh_config_pathes: Vec<PathBuf> = vec![];
+    let mut ssh_config_paths: Vec<PathBuf> = vec![];
     let mut names: Vec<String> = vec![];
-    ssh_config_pathes.push(get_sshconfig_path());
-    let config = load_config(&ssh_config_pathes[0]);
-    get_includes(&mut ssh_config_pathes, config);
-    for ssh_config_path in ssh_config_pathes {
+    ssh_config_paths.push(get_sshconfig_path());
+    let config = load_config(&ssh_config_paths[0]);
+    get_includes(&mut ssh_config_paths, config);
+    for ssh_config_path in ssh_config_paths {
         if !check_blank_sshconfig(&ssh_config_path) {
             let config = load_config(&ssh_config_path);
             get_names(&mut names, config);
@@ -164,7 +165,7 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
     }
 }
 
-fn get_includes(ssh_config_pathes: &mut Vec<PathBuf>, config: BufReader<File>) {
+fn get_includes(ssh_config_paths: &mut Vec<PathBuf>, config: BufReader<File>) {
     for line_result in config.lines() {
         match line_result {
             Ok(line) => {
@@ -179,27 +180,27 @@ fn get_includes(ssh_config_pathes: &mut Vec<PathBuf>, config: BufReader<File>) {
                     let line = line.split_whitespace();
                     for part in line {
                         if part.to_lowercase() != "include" {
-                            if part.starts_with("C:") || part.starts_with("/") {
+                            if Path::new(part).is_absolute() {
                                 if part.contains("*") {
                                     for entry in glob(part).expect("Failed to read glob pattern") {
                                         match entry {
-                                            Ok(path) => ssh_config_pathes.push(PathBuf::from(path)),
+                                            Ok(path) => ssh_config_paths.push(PathBuf::from(path)),
                                             Err(e) => println!("{:?}", e),
                                         }
                                     }
                                 }
-                                else {ssh_config_pathes.push(PathBuf::from(part))}
+                                else {ssh_config_paths.push(PathBuf::from(part))}
                             } else if !part.starts_with("/") {
                                 let part = format!("{}/.ssh/{}", homedir.display(), part);
                                 if part.contains("*") {
                                     for entry in glob(&part).expect("Failed to read glob pattern") {
                                         match entry {
-                                            Ok(path) => ssh_config_pathes.push(PathBuf::from(path)),
+                                            Ok(path) => ssh_config_paths.push(PathBuf::from(path)),
                                             Err(e) => println!("{:?}", e),
                                         }
                                     }
                                 }
-                                else {ssh_config_pathes.push(PathBuf::from(part))}
+                                else {ssh_config_paths.push(PathBuf::from(part))}
                             }
                         }
                     }
