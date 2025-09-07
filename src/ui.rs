@@ -205,7 +205,7 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 }
 
 pub fn render_config_popup(frame: &mut Frame, area: Rect) {
-    let title_text = " Config Settings ";
+    let title_text = " SSH Config Import ";
     let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
     let area = config_popup_area(area);
     let inner = popup_block.inner(area);
@@ -226,7 +226,7 @@ pub fn render_config_popup(frame: &mut Frame, area: Rect) {
         .centered();
     frame.render_widget(info_footer, rects_popup[1]);
 
-    let text2 = "Username, hostname, port, and \nidentity file will be imported";
+    let text2 = "The username, hostname, port, and some\nnon-default options will be imported";
     let info_footer = Paragraph::new(text2)
         .style(Style::new().fg(Color::White))
         .centered();

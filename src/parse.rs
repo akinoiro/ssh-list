@@ -10,7 +10,18 @@ pub struct SSHConfigConnection {
     username: String,
     hostname: String,
     port: String,
+    options: String,
     identityfile: String,
+    identitiesonly: String,
+    clearallforwardings: String,
+    exitonforwardfailure: String,
+    forwardagent: String,
+    forwardx11: String,
+    forwardx11trusted: String,
+    forwardx11timeout: String,
+    serveralivecountmax: String,
+    serveraliveinterval: String,
+    gatewayports: String,
 }
 
 pub fn import_config(app: &mut App) {
@@ -116,7 +127,19 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
             username: String::new(),
             hostname: String::new(),
             port: String::new(),
+            options: String::new(),
             identityfile: String::new(),
+            identitiesonly: String::new(),
+            clearallforwardings: String::new(),
+            exitonforwardfailure: String::new(),
+            forwardagent: String::new(),
+            forwardx11: String::new(),
+            forwardx11trusted: String::new(),
+            forwardx11timeout: String::new(),
+            serveralivecountmax: String::new(),
+            serveraliveinterval: String::new(),
+            gatewayports: String::new(),
+
         };
 
         for mut line in output.lines() {
@@ -135,6 +158,75 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                 connection.identityfile.push_str(&arg);
                 connection.identityfile.push(' ');
             }
+            if line.starts_with("identitiesonly ") {
+                let arg = line.replace("identitiesonly ", "-o IdentitiesOnly=");
+                connection.identitiesonly.push_str(&arg);
+                connection.identitiesonly.push(' ');
+            }
+            if line.starts_with("localforward ") {
+                let mut line = line.split_whitespace();
+                line.next();
+                let port = line.next().unwrap_or_default();
+                let address = line.next().unwrap_or_default();
+                connection.options.push_str(format!("-L {}:{} ", port, address).as_str());
+            }
+            if line.starts_with("remoteforward ") {
+                let mut line = line.split_whitespace();
+                line.next();
+                let port = line.next().unwrap_or_default();
+                let address = line.next().unwrap_or_default();
+                connection.options.push_str(format!("-R {}:{} ", port, address).as_str());
+            }
+            if line.starts_with("dynamicforward ") {
+                let arg = line.replace("dynamicforward ", "-D ");
+                connection.options.push_str(&arg);
+                connection.options.push(' ');
+            }
+            if line.starts_with("clearallforwardings ") {
+                let arg = line.replace("clearallforwardings ", "-o ClearAllForwardings=");
+                connection.clearallforwardings.push_str(&arg);
+                connection.clearallforwardings.push(' ');
+            }
+            if line.starts_with("exitonforwardfailure ") {
+                let arg = line.replace("exitonforwardfailure ", "-o ExitOnForwardFailure=");
+                connection.exitonforwardfailure.push_str(&arg);
+                connection.exitonforwardfailure.push(' ');
+            }
+            if line.starts_with("forwardagent ") {
+                let arg = line.replace("forwardagent ", "-o ForwardAgent=");
+                connection.forwardagent.push_str(&arg);
+                connection.forwardagent.push(' ');
+            }
+            if line.starts_with("forwardx11 ") {
+                let arg = line.replace("forwardx11 ", "-o ForwardX11=");
+                connection.forwardx11.push_str(&arg);
+                connection.forwardx11.push(' ');
+            }
+            if line.starts_with("forwardx11trusted ") {
+                let arg = line.replace("forwardx11trusted ", "-o ForwardX11Trusted=");
+                connection.forwardx11trusted.push_str(&arg);
+                connection.forwardx11trusted.push(' ');
+            }
+            if line.starts_with("forwardx11timeout ") {
+                let arg = line.replace("forwardx11timeout ", "-o ForwardX11Timeout=");
+                connection.forwardx11timeout.push_str(&arg);
+                connection.forwardx11timeout.push(' ');
+            }
+            if line.starts_with("serveralivecountmax ") {
+                let arg = line.replace("serveralivecountmax ", "-o ServerAliveCountMax=");
+                connection.serveralivecountmax.push_str(&arg);
+                connection.serveralivecountmax.push(' ');
+            }
+            if line.starts_with("serveraliveinterval ") {
+                let arg = line.replace("serveraliveinterval ", "-o ServerAliveInterval=");
+                connection.serveraliveinterval.push_str(&arg);
+                connection.serveraliveinterval.push(' ');
+            }
+            if line.starts_with("gatewayports ") {
+                let arg = line.replace("gatewayports ", "-o GatewayPorts=");
+                connection.gatewayports.push_str(&arg);
+                connection.gatewayports.push(' ');
+            }
         }
         sshconfig.push(connection);
     }
@@ -148,6 +240,36 @@ fn compare_with_defaults(
         if i.identityfile == default_output_object.identityfile {
             i.identityfile = String::new();
         }
+        if i.identitiesonly == default_output_object.identitiesonly {
+            i.identitiesonly = String::new();
+        }
+        if i.clearallforwardings == default_output_object.clearallforwardings {
+            i.clearallforwardings = String::new();
+        }
+        if i.exitonforwardfailure == default_output_object.exitonforwardfailure {
+            i.exitonforwardfailure = String::new();
+        }
+        if i.forwardagent == default_output_object.forwardagent {
+            i.forwardagent = String::new();
+        }
+        if i.forwardx11 == default_output_object.forwardx11 {
+            i.forwardx11 = String::new();
+        }
+        if i.forwardx11trusted == default_output_object.forwardx11trusted {
+            i.forwardx11trusted = String::new();
+        }
+        if i.forwardx11timeout == default_output_object.forwardx11timeout {
+            i.forwardx11timeout = String::new();
+        }
+        if i.serveralivecountmax == default_output_object.serveralivecountmax {
+            i.serveralivecountmax = String::new();
+        }
+        if i.serveraliveinterval == default_output_object.serveraliveinterval {
+            i.serveraliveinterval = String::new();
+        }
+        if i.gatewayports == default_output_object.gatewayports {
+            i.gatewayports = String::new();
+        }
     }
 }
 
@@ -159,7 +281,20 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
             username: c.username,
             hostname: c.hostname,
             port: c.port,
-            options: c.identityfile
+            options: format!("{}{}{}{}{}{}{}{}{}{}{}{}",
+                c.options,
+                c.identityfile,
+                c.identitiesonly,
+                c.clearallforwardings,
+                c.exitonforwardfailure,
+                c.forwardagent,
+                c.forwardx11,
+                c.forwardx11timeout,
+                c.forwardx11trusted,
+                c.serveralivecountmax,
+                c.serveraliveinterval,
+                c.gatewayports,
+            )
         };
         app.ssh_connections.push(import);
     }
