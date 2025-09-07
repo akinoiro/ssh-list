@@ -233,7 +233,7 @@ impl App {
         self.scroll_state = self.scroll_state.position(i);
     }
 
-    fn connect(&mut self) {
+    fn connect(&mut self, command: Option<String>) {
         if let Some(i) = self.get_row_index() {
             println!(
                 "Connecting to {} ({})...",
@@ -244,31 +244,8 @@ impl App {
                 .arg(&self.ssh_connections[i].port)
                 .args(split(&self.ssh_connections[i].options).unwrap_or_default())
                 .arg(format!("{}@{}",self.ssh_connections[i].username, self.ssh_connections[i].hostname))
+                .args(split(&command.unwrap_or_default()).unwrap_or_default())
                 .status() {
-                    Ok(_) => std::process::exit(0),
-                    Err(text) => {
-                        eprintln!("Error: Failed to execute ssh command.");
-                        eprintln!("Details: {}", text);
-                        eprintln!("Is OpenSSH installed?");
-                        std::process::exit(1);
-                }
-            }
-        }
-    }
-
-    fn run_command(&mut self, command: String) {
-        if let Some(i) = self.get_row_index() {
-            println!(
-                "Connecting to {} ({})...",
-                self.ssh_connections[i].server_name, self.ssh_connections[i].group_name
-            );
-            match Command::new("ssh")
-                .arg("-p")
-                .arg(&self.ssh_connections[i].port)
-                .args(split(&self.ssh_connections[i].options).unwrap_or_default())
-                .arg(format!("{}@{}",self.ssh_connections[i].username, self.ssh_connections[i].hostname))
-                .args(split(&command).unwrap_or_default()).
-                status() {
                     Ok(_) => std::process::exit(0),
                     Err(text) => {
                         eprintln!("Error: Failed to execute ssh command.");

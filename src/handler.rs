@@ -18,7 +18,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         if check_openssh() {
                             ratatui::restore();
                             execute!(stdout(), Show).ok();
-                            app.connect();
+                            app.connect(None);
                             return false
                         } else {
                             app.search();
@@ -235,7 +235,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 if check_openssh() {
                     ratatui::restore();
                     execute!(stdout(), Show).ok();
-                    app.run_command(app.run_input.to_string());
+                    app.connect(Some(app.run_input.to_string()));
                     return false
                 } else {
                     app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
@@ -265,7 +265,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         if check_openssh() {
                             ratatui::restore();
                             execute!(stdout(), Show).ok();
-                            app.connect();
+                            app.connect(None);
                             return false
                         } else {
                             app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
