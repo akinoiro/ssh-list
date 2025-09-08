@@ -22,6 +22,14 @@ pub struct SSHConfigConnection {
     serveralivecountmax: String,
     serveraliveinterval: String,
     gatewayports: String,
+    passwordauthentication: String,
+    pubkeyauthentication: String,
+    stricthostkeychecking: String,
+    connecttimeout: String,
+    controlmaster: String,
+    controlpath: String,
+    controlpersist: String,
+    compression: String,
 }
 
 pub fn import_config(app: &mut App) {
@@ -139,6 +147,14 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
             serveralivecountmax: String::new(),
             serveraliveinterval: String::new(),
             gatewayports: String::new(),
+            passwordauthentication: String::new(),
+            pubkeyauthentication: String::new(),
+            stricthostkeychecking: String::new(),
+            connecttimeout: String::new(),
+            controlmaster: String::new(),
+            controlpath: String::new(),
+            controlpersist: String::new(),
+            compression: String::new(),
 
         };
 
@@ -171,11 +187,19 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                 connection.options.push_str(format!("-L {}:{} ", port, address).as_str());
             }
             if line.starts_with("remoteforward ") {
-                let mut line = line.split_whitespace();
-                line.next();
-                let port = line.next().unwrap_or_default();
-                let address = line.next().unwrap_or_default();
-                connection.options.push_str(format!("-R {}:{} ", port, address).as_str());
+                if !line.contains("[socks]:0") {
+                    let mut line = line.split_whitespace();
+                    line.next();
+                    let port = line.next().unwrap_or_default();
+                    let address = line.next().unwrap_or_default();
+                    connection.options.push_str(format!("-R {}:{} ", port, address).as_str());
+                } else {
+                    let mut line = line.split_whitespace();
+                    line.next();
+                    let port = line.next().unwrap_or_default();
+                    connection.options.push_str(format!("-R {} ", port).as_str());
+                }
+                
             }
             if line.starts_with("dynamicforward ") {
                 let arg = line.replace("dynamicforward ", "-D ");
@@ -227,6 +251,52 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                 connection.gatewayports.push_str(&arg);
                 connection.gatewayports.push(' ');
             }
+            if line.starts_with("proxyjump ") {
+                let arg = line.replace("proxyjump ", "-J ");
+                connection.options.push_str(&arg);
+                connection.options.push(' ');
+            }
+            if line.starts_with("passwordauthentication ") {
+                let arg = line.replace("passwordauthentication ", "-o PasswordAuthentication=");
+                connection.passwordauthentication.push_str(&arg);
+                connection.passwordauthentication.push(' ');
+            }
+            if line.starts_with("pubkeyauthentication ") {
+                let arg = line.replace("pubkeyauthentication ", "-o PubkeyAuthentication=");
+                connection.pubkeyauthentication.push_str(&arg);
+                connection.pubkeyauthentication.push(' ');
+            }
+            if line.starts_with("stricthostkeychecking ") {
+                let arg = line.replace("stricthostkeychecking ", "-o StrictHostKeyChecking=");
+                connection.stricthostkeychecking.push_str(&arg);
+                connection.stricthostkeychecking.push(' ');
+            }
+            if line.starts_with("connecttimeout ") {
+                let arg = line.replace("connecttimeout ", "-o ConnectTimeout=");
+                connection.connecttimeout.push_str(&arg);
+                connection.connecttimeout.push(' ');
+            }
+            if line.starts_with("controlmaster ") {
+                let arg = line.replace("controlmaster ", "-o ControlMaster=");
+                connection.controlmaster.push_str(&arg);
+                connection.controlmaster.push(' ');
+            }
+            if line.starts_with("controlpath ") {
+                let arg = line.replace("controlpath ", "-o ControlPath=");
+                connection.controlpath.push_str(&arg);
+                connection.controlpath.push(' ');
+            }
+            if line.starts_with("controlpersist ") {
+                let arg = line.replace("controlpersist ", "-o ControlPersist=");
+                connection.controlpersist.push_str(&arg);
+                connection.controlpersist.push(' ');
+            }
+            if line.starts_with("compression ") {
+                let arg = line.replace("compression ", "-o Compression=");
+                connection.compression.push_str(&arg);
+                connection.compression.push(' ');
+            }
+
         }
         sshconfig.push(connection);
     }
@@ -270,6 +340,30 @@ fn compare_with_defaults(
         if i.gatewayports == default_output_object.gatewayports {
             i.gatewayports = String::new();
         }
+        if i.passwordauthentication == default_output_object.passwordauthentication {
+            i.passwordauthentication = String::new();
+        }
+        if i.pubkeyauthentication == default_output_object.pubkeyauthentication {
+            i.pubkeyauthentication = String::new();
+        }
+        if i.stricthostkeychecking == default_output_object.stricthostkeychecking {
+            i.stricthostkeychecking = String::new();
+        }
+        if i.connecttimeout == default_output_object.connecttimeout {
+            i.connecttimeout = String::new();
+        }
+        if i.controlmaster == default_output_object.controlmaster {
+            i.controlmaster = String::new();
+        }
+        if i.controlpath == default_output_object.controlpath {
+            i.controlpath = String::new();
+        }
+        if i.controlpersist == default_output_object.controlpersist {
+            i.controlpersist = String::new();
+        }
+        if i.compression == default_output_object.compression {
+            i.compression = String::new();
+        }
     }
 }
 
@@ -281,7 +375,7 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
             username: c.username,
             hostname: c.hostname,
             port: c.port,
-            options: format!("{}{}{}{}{}{}{}{}{}{}{}{}",
+            options: format!("{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
                 c.options,
                 c.identityfile,
                 c.identitiesonly,
@@ -294,6 +388,14 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
                 c.serveralivecountmax,
                 c.serveraliveinterval,
                 c.gatewayports,
+                c.passwordauthentication,
+                c.pubkeyauthentication,
+                c.stricthostkeychecking,
+                c.connecttimeout,
+                c.controlmaster,
+                c.controlpath,
+                c.controlpersist,
+                c.compression,
             )
         };
         app.ssh_connections.push(import);
