@@ -256,6 +256,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.app_mode = AppMode::Normal;
                 app.search_input = Input::default();
                 app.search();
+                app.table_state.select_first();
             }
             KeyCode::Down | KeyCode::Tab => app.next_row(),
             KeyCode::Up | KeyCode::BackTab => app.previous_row(),
@@ -311,6 +312,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                     app.search_input.handle_event(&Event::Key(key));
                     app.search();
                     app.scroll_state = app.scroll_state.content_length(app.search_index.len());
+                    app.table_state.select_first();
                 }
                 _ => ()
             }
