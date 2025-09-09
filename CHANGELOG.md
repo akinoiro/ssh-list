@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2025-09-09
+### Added
+- Parse hosts from `Include` directive.
+- Parse additional ssh config options: `identitiesonly`, `localforward`, `remoteforward`, `dynamicforward`, `clearallforwardings`, `exitonforwardfailure`, `forwardagent`, `forwardx11`, `forwardx11timeout`, `forwardx11trusted`, `serveralivecountmax`, `serveraliveinterval`, `gatewayports`, `proxyjump`, `passwordauthentication`, `pubkeyauthentication`, `stricthostkeychecking`, `connecttimeout`, `controlmaster`, `controlpath`, `controlpersist`, `compression`.
+### Fixed
+- Options order
+- Table constraints
+
 ## [1.3.0] - 2025-08-28
 ### Added
 - Search
