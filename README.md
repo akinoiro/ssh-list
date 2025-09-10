@@ -1,13 +1,16 @@
 # SSH-List
-![demo gif](https://raw.githubusercontent.com/akinoiro/ssh-list/main/images/demo.gif)
-
 SSH connection manager with a TUI interface.
 
+![demo gif](https://raw.githubusercontent.com/akinoiro/ssh-list/main/images/demo.gif)
+
 Key features:
-- Add, edit, copy, and sort connections.
-- Support for custom SSH options.
-- Execute commands on remote hosts.
-- Import hosts from ~/.ssh/config.
+- Add and edit connections
+- Rearrange connections
+- Import hosts from ~/.ssh/config
+- Search connections
+- Execute commands on remote hosts
+
+This application does not modify your existing SSH configuration files. Host settings can be spread across multiple files referenced by Include directives (and between system and user configs), so automatic editing is unreliable.
 
 This application does not store passwords. For secure authentication, use SSH keys.
 
@@ -17,28 +20,12 @@ You must have an OpenSSH client installed on your system.
 Download the latest binary from the [Releases page](https://github.com/akinoiro/ssh-list/releases).
 
 #### To run the `ssh-list` command from terminal:
-
-Linux:
 ```
 # Make the binary executable
 chmod +x ssh-list
 # Move it to a directory in your PATH
 sudo mv ssh-list /usr/local/bin/
 ```
-
-macOS:
-```
-# Grant permission to run the binary
-xattr -d com.apple.quarantine ssh-list
-# Make the binary executable
-chmod +x ssh-list
-# Move it to a directory in your PATH
-sudo mv ssh-list /usr/local/bin/
-```
-
-Windows:
-1.  Move `ssh-list.exe` to a `C:\Program Files\ssh-list`.
-2.  Add folder's location to your system's `PATH` environment variable.
 
 ## Install from crates.io
 ```
@@ -62,8 +49,8 @@ cd ssh-list
 cargo build --release
 ```
 The binary will be located at target/release/
-## Configuration file
-On the first run, ssh-list will automatically create a configuration file to store your connections.
+## Configuration files
+On the first run, ssh-list will automatically create a file to store your connections:
 ```
 ~/.ssh/ssh-list.json
 ```
