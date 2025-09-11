@@ -6,6 +6,7 @@ use ratatui::{
     text::Text,
     widgets::{Block, BorderType, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
 };
+use std::str::FromStr;
 
 pub fn render_input(app: &App, frame: &mut Frame, area: Rect, title: &str, selected_input: &Input, focused: Focus) {
     let width = area.width.max(3) - 3;
@@ -101,24 +102,25 @@ pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
                 "[A] add | [I] import | [Esc] quit"
             }
             else {
-                "[Enter] connect | [R] run  | [/] search | [I] import | [Esc] quit  \n    [A] add     | [E] edit | [C] copy   | [M] move   | [Del] delete"
+                "[Enter] connect | [R] run  | [/] search | [I] import | [O] settings | [Esc] quit  \n    [A] add     | [E] edit | [C] copy   | [M] move   | [Del] delete                "
             }
         AppMode::New => "[Enter] save | [Esc] cancel",
         AppMode::Edit => "[Enter] save | [Esc] cancel",
         AppMode::Move => "[↓] move down | [↑] move up | [Esc] back",
-        AppMode::ImportExport => "[I] import | [Esc] back",
+        AppMode::Import => "[I] import | [Esc] back",
         AppMode::Error => "[Esc] back",
         AppMode::RunCommand => "[Enter] run command | [Esc] back",
         AppMode::Search => "[Enter] connect | [Ctrl+R] run | [Ctrl+E] edit | [Del] delete | [Esc] back",
+        AppMode::Settings => "[↑][↓] height | [←][→] color | [Esc] back",
     };
-
+    let app_color = Color::from_str(&app.color).unwrap_or(Color::Yellow);
     let info_footer = Paragraph::new(footer_text)
         .style(Style::new().fg(Color::White).bg(Color::Black))
         .centered()
         .block(
             Block::bordered()
                 .border_type(BorderType::Double)
-                .border_style(Style::new().fg(Color::Yellow)),
+                .border_style(Style::new().fg(app_color)),
         );
     frame.render_widget(info_footer, area);
 }
@@ -151,8 +153,9 @@ fn get_constraint(app: &App) -> Vec<Constraint> {
 }
 
 pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
+    let app_color = Color::from_str(&app.color).unwrap_or(Color::Yellow);
     let header_style = Style::default().fg(Color::Gray).bg(Color::Indexed(235));
-    let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::Yellow);
+    let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(app_color);
     let header = [" Name", " Group", " Username", " Hostname", " Port", " Options"]
         .into_iter()
         .map(Cell::from)
@@ -163,19 +166,30 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
     if app.app_mode == AppMode::Normal
         || app.app_mode == AppMode::New
         || app.app_mode == AppMode::Move
-        || app.app_mode == AppMode::ImportExport  {
+        || app.app_mode == AppMode::Settings
+        || app.app_mode == AppMode::Import  {
         for (i, data) in app.ssh_connections.iter().enumerate() {
             let color = match i % 2 {
                 0 => Color::Black,
                 _ => Color::Indexed(235),
             };
             let item = data.ref_array();
-            let row = item.into_iter()
-                .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
-                .collect::<Row>()
-                .style(Style::new().fg(Color::White).bg(color))
-                .height(3);
-            rows.push(row);
+            if app.row_height == 3 {
+                let row = item.into_iter()
+                    .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
+                    .collect::<Row>()
+                    .style(Style::new().fg(Color::White).bg(color))
+                    .height(3);
+                    rows.push(row);
+            }
+            if app.row_height == 1 {
+                let row = item.into_iter()
+                    .map(|content| Cell::from(Text::from(format!(" {content}"))))
+                    .collect::<Row>()
+                    .style(Style::new().fg(Color::White).bg(color))
+                    .height(1);
+                    rows.push(row);
+            } 
         }
     } else {
         for (i, &index) in app.search_index.iter().enumerate() {
@@ -185,12 +199,22 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
                 _ => Color::Indexed(235),
             };
             let item = data.ref_array();
-            let row = item.into_iter()
-                .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
-                .collect::<Row>()
-                .style(Style::new().fg(Color::White).bg(color))
-                .height(3);
-            rows.push(row);
+            if app.row_height == 3 {
+                let row = item.into_iter()
+                    .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
+                    .collect::<Row>()
+                    .style(Style::new().fg(Color::White).bg(color))
+                    .height(3);
+                rows.push(row);
+            }
+            if app.row_height == 1 {
+                let row = item.into_iter()
+                    .map(|content| Cell::from(Text::from(format!(" {content}"))))
+                    .collect::<Row>()
+                    .style(Style::new().fg(Color::White).bg(color))
+                    .height(1);
+                rows.push(row);
+            }
         }
     }
     let t = Table::new(
@@ -281,4 +305,26 @@ pub fn render_search(app: &mut App, frame: &mut Frame, area: Rect) {
         &app.search_input,
         Focus::SearchField,
     );
+}
+
+pub fn render_settings_popup(frame: &mut Frame, area: Rect) {
+    let title_text = " Settings ";
+    let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
+    let area = settings_popup_area(area);
+    let inner = popup_block.inner(area);
+    frame.render_widget(Clear, area);
+    frame.render_widget(popup_block, area);
+
+    let vertical_popup = &Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Length(3),
+    ]);
+    let rects_popup = vertical_popup.split(inner);
+
+    let text = format!("Press [↑] or [↓] to change row height\n\nPress [←] or [→] to change color     ");
+    let info_footer = Paragraph::new(text)
+        .style(Style::new().fg(Color::White))
+        .centered();
+    frame.render_widget(info_footer, rects_popup[1]);
+
 }

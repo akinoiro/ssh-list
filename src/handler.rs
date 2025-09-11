@@ -23,7 +23,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         } else {
                             app.search();
                             app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
-                            app.show_config_popup = false;
+                            app.show_import_popup = false;
                             app.show_error_popup = true;
                             app.app_mode = AppMode::Error;                    
                         }
@@ -41,8 +41,8 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.next_row();
             },
             KeyCode::Char('i'|'I'|'ш'|'Ш') => {
-                app.show_config_popup = true;
-                app.app_mode = AppMode::ImportExport;
+                app.show_import_popup = true;
+                app.app_mode = AppMode::Import;
             }
             KeyCode::Char('m'|'M'|'ь'|'Ь') =>
                 match app.table_state.selected() {
@@ -57,7 +57,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         app.app_mode = AppMode::Edit;
                         app.focus = Focus::ServerNameField;
                         app.selected_config_to_fields();
-                        app.show_popup = true;
+                        app.show_edit_popup = true;
                     }
                     None => ()
                 }
@@ -65,7 +65,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             KeyCode::Char('a'|'A'|'ф'|'Ф') => {
                 app.app_mode = AppMode::New;
                 app.reset_fields();
-                app.show_popup = true;
+                app.show_edit_popup = true;
                 app.focus = Focus::ServerNameField;
             }
             KeyCode::Char('r'|'R'|'к'|'К') => {
@@ -85,17 +85,21 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.focus = Focus::SearchField;
                 app.search();
             }
+            KeyCode::Char('O'|'o') => {
+                app.app_mode = AppMode::Settings;
+                app.show_settings_popup = true;
+            }
             _ => {}
         },
         AppMode::New => match key.code {
             KeyCode::Enter => {
                 app.add_connection();
                 app.app_mode = AppMode::Normal;
-                app.show_popup = false;
+                app.show_edit_popup = false;
                 app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
             }
             KeyCode::Esc => {
-                app.show_popup = false;
+                app.show_edit_popup = false;
                 app.app_mode = AppMode::Normal;
             }
             KeyCode::Down | KeyCode::Tab => app.focus_next_field(),
@@ -131,10 +135,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                     app.focus = Focus::SearchField;
                     app.search();
                 };
-                app.show_popup = false;
+                app.show_edit_popup = false;
             }
             KeyCode::Esc => {
-                app.show_popup = false;
+                app.show_edit_popup = false;
                 if app.last_app_mode == AppMode::Normal {app.app_mode = AppMode::Normal};
                 if app.last_app_mode == AppMode::Search {
                     app.app_mode = AppMode::Search;
@@ -167,7 +171,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
         },
         AppMode::Move => match key.code {
             KeyCode::Esc => {
-                app.show_popup = false;
+                app.show_edit_popup = false;
                 app.app_mode = AppMode::Normal;
             }
             KeyCode::Down => {
@@ -178,31 +182,31 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
             }
             _ => {}
         },
-        AppMode::ImportExport =>  match key.code {
+        AppMode::Import =>  match key.code {
             KeyCode::Char('i'|'I'|'ш'|'Ш')  => {
                 if !parse::check_blank_sshconfig(&parse::get_sshconfig_path()) {
                     if check_openssh() {
                         parse::import_config(app);
-                        app.show_config_popup = false;
+                        app.show_import_popup = false;
                         app.app_mode = AppMode::Normal;
                         app.scroll_state = app.scroll_state.content_length(app.ssh_connections.len());
                     } else {
                         app.search();
                         app.error_text = "Failed to import ssh config.\nIs the OpenSSH-client installed?".to_string();
-                        app.show_config_popup = false;
+                        app.show_import_popup = false;
                         app.show_error_popup = true;
                         app.app_mode = AppMode::Error;                    
                     }
                 } else {
                     app.search();
                     app.error_text = "The config is empty or does not exist.".to_string();
-                    app.show_config_popup = false;
+                    app.show_import_popup = false;
                     app.show_error_popup = true;
                     app.app_mode = AppMode::Error;
                 }
             }
             KeyCode::Esc => {
-                app.show_config_popup = false;
+                app.show_import_popup = false;
                 app.app_mode = AppMode::Normal;
             }
             _ => {}
@@ -270,7 +274,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                             return false
                         } else {
                             app.error_text = "Failed to execute ssh command.\nIs the OpenSSH-client installed?".to_string();
-                            app.show_config_popup = false;
+                            app.show_import_popup = false;
                             app.show_error_popup = true;
                             app.app_mode = AppMode::Error;                    
                         }
@@ -286,7 +290,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                         app.app_mode = AppMode::Edit;
                         app.focus = Focus::ServerNameField;
                         app.selected_config_to_fields();
-                        app.show_popup = true;
+                        app.show_edit_popup = true;
                     }
                     None => ()
                 }
@@ -316,6 +320,29 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 }
                 _ => ()
             }
+        }
+        AppMode::Settings =>  match key.code {
+            KeyCode::Esc => {
+                app.app_mode = AppMode::Normal;
+                app.show_settings_popup = false;
+            }
+            KeyCode::Up => {
+                app.row_height = 3;
+                app.update_appconfig();
+            }
+            KeyCode::Down => {
+                app.row_height = 1;
+                app.update_appconfig();
+            }
+            KeyCode::Right => {
+                app.next_color();
+                app.update_appconfig();
+            }
+            KeyCode::Left => {
+                app.previous_color();
+                app.update_appconfig();
+            }
+            _ => {}
         }
     }
     true

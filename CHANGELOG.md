@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- Ability to change the application's accent color
+- Ability to change row height
+
 ## [1.4.0] - 2025-09-09
 ### Added
 - Parse hosts from `Include` directive.

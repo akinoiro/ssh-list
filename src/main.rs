@@ -57,6 +57,12 @@ pub struct FieldInputs {
     options_input: Input,
 }
 
+#[derive(Deserialize, Serialize, PartialEq, Default)]
+pub struct AppConfig {
+    color: Option<String>,
+    row_height: Option<u16>,
+}
+
 #[derive(PartialEq)]
 pub enum Focus {
     ServerNameField,
@@ -75,20 +81,22 @@ pub enum AppMode {
     Edit,
     New,
     Move,
-    ImportExport,
+    Import,
     Error,
     RunCommand,
     Search,
+    Settings,
 }
 
 pub struct App {
     table_state: TableState,
     ssh_connections: Vec<SSHConnection>,
     scroll_state: ScrollbarState,
-    show_popup: bool,
-    show_config_popup: bool,
+    show_edit_popup: bool,
+    show_import_popup: bool,
     show_error_popup: bool,
     show_run_popup: bool,
+    show_settings_popup: bool,
     focus: Focus,
     field_inputs: FieldInputs,
     run_input: Input,
@@ -96,7 +104,9 @@ pub struct App {
     search_index: Vec<usize>,
     app_mode: AppMode,
     last_app_mode: AppMode,
-    error_text: String
+    error_text: String,
+    row_height: u16,
+    color: String,
 }
 
 impl App {
@@ -106,10 +116,11 @@ impl App {
             table_state: TableState::default().with_selected(0),
             scroll_state: ScrollbarState::new(data_vec.len()),
             ssh_connections: data_vec,
-            show_popup: false,
-            show_config_popup: false,
+            show_edit_popup: false,
+            show_import_popup: false,
             show_error_popup: false,
             show_run_popup: false,
+            show_settings_popup: false,
             focus: Focus::ServerNameField,
             field_inputs: FieldInputs {
                 server_name_input: Input::default(),
@@ -125,11 +136,14 @@ impl App {
             app_mode: AppMode::Normal,
             last_app_mode: AppMode::Normal,
             error_text: String::new(),
+            row_height: 3,
+            color: "yellow".to_string()
         }
     }
 
     fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
         self.check_blank_config();
+        self.apply_appconfig();
         loop {
             terminal.draw(|frame| self.draw(frame))?;
             let event = event::read()?;
@@ -173,11 +187,11 @@ impl App {
             _ => ui::render_footer(self, frame, rects_v[1])
         }
 
-        if self.show_popup {
+        if self.show_edit_popup {
             ui::render_popup(self, frame, rects_v[0]);
         }
 
-        if self.show_config_popup {
+        if self.show_import_popup {
             ui::render_config_popup(frame, rects_v[0]);
         }
 
@@ -189,15 +203,20 @@ impl App {
             self.focus = Focus::RunField;
             ui::render_run_popup(self, frame, rects_v[0]);
         }
+
+        if self.show_settings_popup {
+            ui::render_settings_popup(frame, rects_v[0]);
+        }
+
     }
 
     fn check_blank_config(&mut self) {
         if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == true {
-            self.show_popup = true;
+            self.show_edit_popup = true;
             self.app_mode = AppMode::New
         } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == false {
-            self.show_config_popup = true;
-            self.app_mode = AppMode::ImportExport
+            self.show_import_popup = true;
+            self.app_mode = AppMode::Import
         } else if self.ssh_connections != vec![] {
             self.app_mode = AppMode::Normal;
         }
@@ -422,6 +441,84 @@ impl App {
             self.search_index.get(selected_row).copied()
         }
     }
+
+    fn apply_appconfig(&mut self) {
+        let appconfig = read_appconfig();
+        self.color = match appconfig.color {
+            Some(color) => 
+                if color == "red"
+                || color == "green"
+                || color == "yellow"
+                || color == "blue"
+                || color == "magenta"
+                || color == "cyan"
+                || color == "gray"
+                || color == "darkgray"
+                || color == "lightred"
+                || color == "lightgreen"
+                || color == "lightyellow"
+                || color == "lightblue"
+                || color == "lightmagenta"
+                || color == "lightcyan"
+                || color == "white" {
+                    color
+                } else {
+                    "yellow".to_string()
+                },
+            None => "yellow".to_string()
+        };
+        if let Some(c) = appconfig.row_height {
+            if c == 1 || c == 3 {self.row_height = c;}
+        }
+    }
+
+    pub fn update_appconfig(&mut self) {
+        let appconfig = AppConfig {
+            color: Some(self.color.clone()),
+            row_height: Some(self.row_height),
+        };
+        let toml = toml::to_string(&appconfig).unwrap();
+        match fs::write(get_appconfig_path(), toml) {
+            Ok(_) => (),
+            Err(_) => ()
+        };
+    }
+
+    pub fn next_color(&mut self) {
+        if self.color == "yellow" {self.color = "lightyellow".to_string()}
+        else if self.color == "lightyellow" {self.color = "white".to_string()}
+        else if self.color == "white" {self.color = "darkgray".to_string()}
+        else if self.color == "darkgray" {self.color = "gray".to_string()}
+        else if self.color == "gray" {self.color = "red".to_string()}
+        else if self.color == "red" {self.color = "lightred".to_string()}
+        else if self.color == "lightred" {self.color = "green".to_string()}
+        else if self.color == "green" {self.color = "lightgreen".to_string()}
+        else if self.color == "lightgreen" {self.color = "blue".to_string()}
+        else if self.color == "blue" {self.color = "lightblue".to_string()}
+        else if self.color == "lightblue" {self.color = "magenta".to_string()}
+        else if self.color == "magenta" {self.color = "lightmagenta".to_string()}
+        else if self.color == "lightmagenta" {self.color = "cyan".to_string()}
+        else if self.color == "cyan" {self.color = "lightcyan".to_string()}
+        else if self.color == "lightcyan" {self.color = "yellow".to_string()}
+    }
+
+    pub fn previous_color(&mut self) {
+        if self.color == "yellow" { self.color = "lightcyan".to_string() }
+        else if self.color == "lightcyan" { self.color = "cyan".to_string() }
+        else if self.color == "cyan" { self.color = "lightmagenta".to_string() }
+        else if self.color == "lightmagenta" { self.color = "magenta".to_string() }
+        else if self.color == "magenta" { self.color = "lightblue".to_string() }
+        else if self.color == "lightblue" { self.color = "blue".to_string() }
+        else if self.color == "blue" { self.color = "lightgreen".to_string() }
+        else if self.color == "lightgreen" { self.color = "green".to_string() }
+        else if self.color == "green" { self.color = "lightred".to_string() }
+        else if self.color == "lightred" { self.color = "red".to_string() }
+        else if self.color == "red" { self.color = "gray".to_string() }
+        else if self.color == "gray" { self.color = "darkgray".to_string() }
+        else if self.color == "darkgray" { self.color = "white".to_string() }
+        else if self.color == "white" { self.color = "lightyellow".to_string() }
+        else if self.color == "lightyellow" { self.color = "yellow".to_string() }
+    }
 }
 
 fn get_config_path() -> PathBuf {
@@ -465,6 +562,38 @@ fn read_config() -> Vec<SSHConnection> {
             std::process::exit(1);
         }
     }
+}
+
+fn get_appconfig_path() -> PathBuf {
+    let mut config_dir_pathbuf = match env::home_dir() {
+        Some(path) => path,
+        None => {
+            ratatui::restore();
+            eprintln!("Error: Could not find the home directory.");
+            execute!(stdout(), Show).ok();
+            std::process::exit(1);
+        }
+    };
+    config_dir_pathbuf.push(".ssh");
+    let config_dir_path = config_dir_pathbuf.display().to_string();
+    match fs::create_dir_all(&config_dir_path) {
+        Ok(_) => (),
+        Err(text) => {
+            ratatui::restore();
+            eprintln!("{}: {}", config_dir_path, text);
+            execute!(stdout(), Show).ok();
+            std::process::exit(1);
+        }
+    };
+    config_dir_pathbuf.push("ssh-list_config.toml");
+    config_dir_pathbuf
+}
+
+fn read_appconfig() -> AppConfig {
+    let config_path = get_appconfig_path();
+    let file_data: String = fs::read_to_string(&config_path).unwrap_or_default();
+    let appconfig: AppConfig = toml::from_str(&file_data).unwrap_or_default();
+    appconfig
 }
 
 pub fn popup_area(area: Rect) -> Rect {
@@ -513,6 +642,14 @@ fn check_openssh() -> bool {
 pub fn search_area(area: Rect) -> Rect {
     let vertical = Layout::vertical([Constraint::Length(3)]);
     let horizontal = Layout::horizontal([Constraint::Percentage(100)]);
+    let [area] = vertical.areas(area);
+    let [area] = horizontal.areas(area);
+    area
+}
+
+pub fn settings_popup_area(area: Rect) -> Rect {
+    let vertical = Layout::vertical([Constraint::Length(7)]).flex(Flex::Center);
+    let horizontal = Layout::horizontal([Constraint::Length(46)]).flex(Flex::Center);
     let [area] = vertical.areas(area);
     let [area] = horizontal.areas(area);
     area
