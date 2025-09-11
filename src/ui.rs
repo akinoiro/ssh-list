@@ -1,10 +1,12 @@
 use crate::*;
 use ratatui::{
-    Frame,
     layout::{Alignment, Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::Text,
-    widgets::{Block, BorderType, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
+    widgets::{
+        Block, BorderType, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table,
+    },
+    Frame,
 };
 use std::str::FromStr;
 
@@ -97,13 +99,13 @@ pub fn render_popup(app: &mut App, frame: &mut Frame, area: Rect) {
 
 pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
     let footer_text = match app.app_mode {
-        AppMode::Normal => 
+        AppMode::Normal => {
             if app.ssh_connections.is_empty() {
                 "[A] add | [I] import | [Esc] quit"
+            } else {
+                "[Enter] connect | [R] run  | [/] search | [I] import | [O] settings | [Esc] quit  \n    [A] add     | [E] edit | [C] copy   | [M] move   | [S] sort     | [Del] delete"
             }
-            else {
-                "[Enter] connect | [R] run  | [/] search | [I] import | [O] settings | [Esc] quit  \n    [A] add     | [E] edit | [C] copy   | [M] move   | [Del] delete                "
-            }
+        }
         AppMode::New => "[Enter] save | [Esc] cancel",
         AppMode::Edit => "[Enter] save | [Esc] cancel",
         AppMode::Move => "[↓] move down | [↑] move up | [Esc] back",
@@ -112,6 +114,7 @@ pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
         AppMode::RunCommand => "[Enter] run command | [Esc] back",
         AppMode::Search => "[Enter] connect | [Ctrl+R] run | [Ctrl+E] edit | [Del] delete | [Esc] back",
         AppMode::Settings => "[↑][↓] height | [←][→] color | [Esc] back",
+        AppMode::Sort => "[n] name | [g] group | [u] username | [h] hostname | [p] port | [Esc] back",
     };
     let app_color = Color::from_str(&app.color).unwrap_or(Color::Yellow);
     let info_footer = Paragraph::new(footer_text)
@@ -137,19 +140,39 @@ pub fn render_scrollbar(app: &mut App, frame: &mut Frame, area: Rect) {
 }
 
 fn get_constraint(app: &App) -> Vec<Constraint> {
-    let server_name_len = app.ssh_connections.iter().map(|i| i.server_name.len() + 1).max().unwrap_or(0);
-    let group_name_len = app.ssh_connections.iter().map(|i| i.group_name.len() + 1).max().unwrap_or(0);
-    let username_len = app.ssh_connections.iter().map(|i| i.username.len() + 1).max().unwrap_or(0);
-    let hostname_len = app.ssh_connections.iter().map(|i| i.hostname.len() + 1).max().unwrap_or(0);
+    let server_name_len = app
+        .ssh_connections
+        .iter()
+        .map(|i| i.server_name.len() + 1)
+        .max()
+        .unwrap_or(0);
+    let group_name_len = app
+        .ssh_connections
+        .iter()
+        .map(|i| i.group_name.len() + 1)
+        .max()
+        .unwrap_or(0);
+    let username_len = app
+        .ssh_connections
+        .iter()
+        .map(|i| i.username.len() + 1)
+        .max()
+        .unwrap_or(0);
+    let hostname_len = app
+        .ssh_connections
+        .iter()
+        .map(|i| i.hostname.len() + 1)
+        .max()
+        .unwrap_or(0);
 
     vec![
-            Constraint::Length(server_name_len.clamp(15, 30) as u16),
-            Constraint::Length(group_name_len.clamp(15, 30) as u16),
-            Constraint::Length(username_len.clamp(15, 30) as u16),
-            Constraint::Length(hostname_len.clamp(15, 50) as u16),
-            Constraint::Length(7),  //port
-            Constraint::Min(10),    //options
-        ]
+        Constraint::Length(server_name_len.clamp(10, 50) as u16),
+        Constraint::Length(group_name_len.clamp(10, 50) as u16),
+        Constraint::Length(username_len.clamp(10, 50) as u16),
+        Constraint::Length(hostname_len.clamp(10, 50) as u16),
+        Constraint::Length(7), //port
+        Constraint::Min(1),    //options
+    ]
 }
 
 pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
@@ -167,7 +190,9 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
         || app.app_mode == AppMode::New
         || app.app_mode == AppMode::Move
         || app.app_mode == AppMode::Settings
-        || app.app_mode == AppMode::Import  {
+        || app.app_mode == AppMode::Import
+        || app.app_mode == AppMode::Sort
+    {
         for (i, data) in app.ssh_connections.iter().enumerate() {
             let color = match i % 2 {
                 0 => Color::Black,
@@ -175,21 +200,23 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
             };
             let item = data.ref_array();
             if app.row_height == 3 {
-                let row = item.into_iter()
+                let row = item
+                    .into_iter()
                     .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
                     .collect::<Row>()
                     .style(Style::new().fg(Color::White).bg(color))
                     .height(3);
-                    rows.push(row);
+                rows.push(row);
             }
             if app.row_height == 1 {
-                let row = item.into_iter()
+                let row = item
+                    .into_iter()
                     .map(|content| Cell::from(Text::from(format!(" {content}"))))
                     .collect::<Row>()
                     .style(Style::new().fg(Color::White).bg(color))
                     .height(1);
-                    rows.push(row);
-            } 
+                rows.push(row);
+            }
         }
     } else {
         for (i, &index) in app.search_index.iter().enumerate() {
@@ -200,7 +227,8 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
             };
             let item = data.ref_array();
             if app.row_height == 3 {
-                let row = item.into_iter()
+                let row = item
+                    .into_iter()
                     .map(|content| Cell::from(Text::from(format!("\n {content}\n"))))
                     .collect::<Row>()
                     .style(Style::new().fg(Color::White).bg(color))
@@ -208,7 +236,8 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
                 rows.push(row);
             }
             if app.row_height == 1 {
-                let row = item.into_iter()
+                let row = item
+                    .into_iter()
                     .map(|content| Cell::from(Text::from(format!(" {content}"))))
                     .collect::<Row>()
                     .style(Style::new().fg(Color::White).bg(color))
@@ -217,14 +246,11 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
             }
         }
     }
-    let t = Table::new(
-        rows,
-        get_constraint(&app),
-    )
-    .header(header)
-    .row_highlight_style(selected_row_style)
-    .bg(Color::Black)
-    .highlight_spacing(HighlightSpacing::Always);
+    let t = Table::new(rows, get_constraint(&app))
+        .header(header)
+        .row_highlight_style(selected_row_style)
+        .bg(Color::Black)
+        .highlight_spacing(HighlightSpacing::Always);
     frame.render_stateful_widget(t, area, &mut app.table_state);
 }
 
@@ -244,16 +270,15 @@ pub fn render_config_popup(frame: &mut Frame, area: Rect) {
     ]);
     let rects_popup = vertical_popup.split(inner);
 
-    let text1 = format!("Press [I] to import connections from:\n{}",parse::get_sshconfig_path().display());
-    let info_footer = Paragraph::new(text1)
-        .style(Style::new().fg(Color::White))
-        .centered();
+    let text1 = format!(
+        "Press [I] to import connections from:\n{}",
+        parse::get_sshconfig_path().display()
+    );
+    let info_footer = Paragraph::new(text1).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[1]);
 
     let text2 = "The username, hostname, port, and some\nnon-default options will be imported";
-    let info_footer = Paragraph::new(text2)
-        .style(Style::new().fg(Color::White))
-        .centered();
+    let info_footer = Paragraph::new(text2).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[3]);
 }
 
@@ -265,18 +290,12 @@ pub fn render_error_popup(frame: &mut Frame, area: Rect, error_text: String) {
     frame.render_widget(Clear, area);
     frame.render_widget(popup_block, area);
 
-    let vertical_popup = &Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Length(2),
-    ]);
+    let vertical_popup = &Layout::vertical([Constraint::Length(1), Constraint::Length(2)]);
     let rects_popup = vertical_popup.split(inner);
 
-    let text1 = format!("{}",error_text);
-    let info_footer = Paragraph::new(text1)
-        .style(Style::new().fg(Color::White))
-        .centered();
+    let text1 = format!("{}", error_text);
+    let info_footer = Paragraph::new(text1).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[1]);
-
 }
 
 pub fn render_run_popup(app: &mut App, frame: &mut Frame, area: Rect) {
@@ -315,16 +334,10 @@ pub fn render_settings_popup(frame: &mut Frame, area: Rect) {
     frame.render_widget(Clear, area);
     frame.render_widget(popup_block, area);
 
-    let vertical_popup = &Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Length(3),
-    ]);
+    let vertical_popup = &Layout::vertical([Constraint::Length(1), Constraint::Length(3)]);
     let rects_popup = vertical_popup.split(inner);
 
     let text = format!("Press [↑] or [↓] to change row height\n\nPress [←] or [→] to change color     ");
-    let info_footer = Paragraph::new(text)
-        .style(Style::new().fg(Color::White))
-        .centered();
+    let info_footer = Paragraph::new(text).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[1]);
-
 }

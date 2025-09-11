@@ -2,20 +2,20 @@ mod handler;
 mod parse;
 mod ui;
 
-use crossterm::execute;
 use crossterm::cursor::Show;
+use crossterm::execute;
 use ratatui::{
-    DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyEventKind},
     layout::{Constraint, Flex, Layout, Rect},
     widgets::{ScrollbarState, TableState},
+    DefaultTerminal, Frame,
 };
 use serde::{Deserialize, Serialize};
 use shlex::split;
-use std::{env, fs};
 use std::io::stdout;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::{env, fs};
 use tui_input::Input;
 
 fn main() -> std::io::Result<()> {
@@ -86,6 +86,7 @@ pub enum AppMode {
     RunCommand,
     Search,
     Settings,
+    Sort,
 }
 
 pub struct App {
@@ -137,7 +138,7 @@ impl App {
             last_app_mode: AppMode::Normal,
             error_text: String::new(),
             row_height: 3,
-            color: "yellow".to_string()
+            color: "yellow".to_string(),
         }
     }
 
@@ -159,18 +160,18 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-
-        let vertical= match self.app_mode {
+        let vertical = match self.app_mode {
             AppMode::Search => Layout::vertical([Constraint::Min(5), Constraint::Length(3), Constraint::Length(3)]),
-            AppMode::Normal => if self.ssh_connections.is_empty() {
-                Layout::vertical([Constraint::Min(5), Constraint::Length(3)])
-            }
-            else {
-                Layout::vertical([Constraint::Min(5), Constraint::Length(4)])
+            AppMode::Normal => {
+                if self.ssh_connections.is_empty() {
+                    Layout::vertical([Constraint::Min(5), Constraint::Length(3)])
+                } else {
+                    Layout::vertical([Constraint::Min(5), Constraint::Length(4)])
+                }
             }
             _ => Layout::vertical([Constraint::Min(5), Constraint::Length(3)]),
         };
-        
+
         let rects_v = vertical.split(frame.area());
 
         let horizontal = Layout::horizontal([Constraint::Min(0), Constraint::Length(3)]);
@@ -184,7 +185,7 @@ impl App {
                 ui::render_search(self, frame, rects_v[1]);
                 ui::render_footer(self, frame, rects_v[2]);
             }
-            _ => ui::render_footer(self, frame, rects_v[1])
+            _ => ui::render_footer(self, frame, rects_v[1]),
         }
 
         if self.show_edit_popup {
@@ -207,14 +208,14 @@ impl App {
         if self.show_settings_popup {
             ui::render_settings_popup(frame, rects_v[0]);
         }
-
     }
 
     fn check_blank_config(&mut self) {
         if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == true {
             self.show_edit_popup = true;
             self.app_mode = AppMode::New
-        } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == false {
+        } else if self.ssh_connections == vec![] && parse::check_blank_sshconfig(&parse::get_sshconfig_path()) == false
+        {
             self.show_import_popup = true;
             self.app_mode = AppMode::Import
         } else if self.ssh_connections != vec![] {
@@ -262,15 +263,19 @@ impl App {
                 .arg("-p")
                 .arg(&self.ssh_connections[i].port)
                 .args(split(&self.ssh_connections[i].options).unwrap_or_default())
-                .arg(format!("{}@{}",self.ssh_connections[i].username, self.ssh_connections[i].hostname))
+                .arg(format!(
+                    "{}@{}",
+                    self.ssh_connections[i].username, self.ssh_connections[i].hostname
+                ))
                 .args(split(&command.unwrap_or_default()).unwrap_or_default())
-                .status() {
-                    Ok(_) => std::process::exit(0),
-                    Err(text) => {
-                        eprintln!("Error: Failed to execute ssh command.");
-                        eprintln!("Details: {}", text);
-                        eprintln!("Is OpenSSH installed?");
-                        std::process::exit(1);
+                .status()
+            {
+                Ok(_) => std::process::exit(0),
+                Err(text) => {
+                    eprintln!("Error: Failed to execute ssh command.");
+                    eprintln!("Details: {}", text);
+                    eprintln!("Is OpenSSH installed?");
+                    std::process::exit(1);
                 }
             }
         }
@@ -318,12 +323,16 @@ impl App {
 
     fn selected_config_to_fields(&mut self) {
         if let Some(i) = self.get_row_index() {
-            self.field_inputs.server_name_input = Input::default().with_value(self.ssh_connections[i].server_name.to_string());
-            self.field_inputs.group_name_input  = Input::default().with_value(self.ssh_connections[i].group_name.to_string());
-            self.field_inputs.username_input    = Input::default().with_value(self.ssh_connections[i].username.to_string());
-            self.field_inputs.hostname_input    = Input::default().with_value(self.ssh_connections[i].hostname.to_string());
-            self.field_inputs.port_input        = Input::default().with_value(self.ssh_connections[i].port.to_string());
-            self.field_inputs.options_input     = Input::default().with_value(self.ssh_connections[i].options.to_string());
+            self.field_inputs.server_name_input =
+                Input::default().with_value(self.ssh_connections[i].server_name.to_string());
+            self.field_inputs.group_name_input =
+                Input::default().with_value(self.ssh_connections[i].group_name.to_string());
+            self.field_inputs.username_input =
+                Input::default().with_value(self.ssh_connections[i].username.to_string());
+            self.field_inputs.hostname_input =
+                Input::default().with_value(self.ssh_connections[i].hostname.to_string());
+            self.field_inputs.port_input = Input::default().with_value(self.ssh_connections[i].port.to_string());
+            self.field_inputs.options_input = Input::default().with_value(self.ssh_connections[i].options.to_string());
         };
     }
 
@@ -350,9 +359,9 @@ impl App {
         };
     }
 
-    fn copy_connection (&mut self) {
+    fn copy_connection(&mut self) {
         if let Some(i) = self.table_state.selected() {
-            self.ssh_connections.insert(i+1, self.ssh_connections[i].clone());
+            self.ssh_connections.insert(i + 1, self.ssh_connections[i].clone());
             self.update_config();
         };
     }
@@ -365,7 +374,7 @@ impl App {
             Focus::HostnameField => Focus::PortField,
             Focus::PortField => Focus::OptionsField,
             Focus::OptionsField => Focus::OptionsField,
-            _ => Focus::ServerNameField
+            _ => Focus::ServerNameField,
         };
     }
 
@@ -377,7 +386,7 @@ impl App {
             Focus::HostnameField => Focus::UsernameField,
             Focus::PortField => Focus::HostnameField,
             Focus::OptionsField => Focus::PortField,
-            _ => Focus::ServerNameField
+            _ => Focus::ServerNameField,
         };
     }
 
@@ -392,7 +401,6 @@ impl App {
             }
         }
         self.update_config()
-        
     }
 
     fn move_row_up(&mut self) {
@@ -412,12 +420,13 @@ impl App {
         let search_input = self.search_input.to_string().to_lowercase();
         self.search_index.clear();
         for (index, connection) in self.ssh_connections.iter().enumerate() {
-            if connection.server_name.to_lowercase().contains(&search_input) ||
-                connection.hostname.to_lowercase().contains(&search_input) ||
-                connection.username.to_lowercase().contains(&search_input) ||
-                connection.port.to_lowercase().contains(&search_input) ||
-                connection.group_name.to_lowercase().contains(&search_input) ||
-                connection.options.to_lowercase().contains(&search_input) {
+            if connection.server_name.to_lowercase().contains(&search_input)
+                || connection.hostname.to_lowercase().contains(&search_input)
+                || connection.username.to_lowercase().contains(&search_input)
+                || connection.port.to_lowercase().contains(&search_input)
+                || connection.group_name.to_lowercase().contains(&search_input)
+                || connection.options.to_lowercase().contains(&search_input)
+            {
                 self.search_index.push(index);
             }
         }
@@ -427,7 +436,6 @@ impl App {
         };
         self.table_state.select(Some(i));
         self.scroll_state = self.scroll_state.position(i);
-
     }
 
     fn get_row_index(&self) -> Option<usize> {
@@ -445,30 +453,34 @@ impl App {
     fn apply_appconfig(&mut self) {
         let appconfig = read_appconfig();
         self.color = match appconfig.color {
-            Some(color) => 
+            Some(color) => {
                 if color == "red"
-                || color == "green"
-                || color == "yellow"
-                || color == "blue"
-                || color == "magenta"
-                || color == "cyan"
-                || color == "gray"
-                || color == "darkgray"
-                || color == "lightred"
-                || color == "lightgreen"
-                || color == "lightyellow"
-                || color == "lightblue"
-                || color == "lightmagenta"
-                || color == "lightcyan"
-                || color == "white" {
+                    || color == "green"
+                    || color == "yellow"
+                    || color == "blue"
+                    || color == "magenta"
+                    || color == "cyan"
+                    || color == "gray"
+                    || color == "darkgray"
+                    || color == "lightred"
+                    || color == "lightgreen"
+                    || color == "lightyellow"
+                    || color == "lightblue"
+                    || color == "lightmagenta"
+                    || color == "lightcyan"
+                    || color == "white"
+                {
                     color
                 } else {
                     "yellow".to_string()
-                },
-            None => "yellow".to_string()
+                }
+            }
+            None => "yellow".to_string(),
         };
         if let Some(c) = appconfig.row_height {
-            if c == 1 || c == 3 {self.row_height = c;}
+            if c == 1 || c == 3 {
+                self.row_height = c;
+            }
         }
     }
 
@@ -480,44 +492,95 @@ impl App {
         let toml = toml::to_string(&appconfig).unwrap();
         match fs::write(get_appconfig_path(), toml) {
             Ok(_) => (),
-            Err(_) => ()
+            Err(_) => (),
         };
     }
 
     pub fn next_color(&mut self) {
-        if self.color == "yellow" {self.color = "lightyellow".to_string()}
-        else if self.color == "lightyellow" {self.color = "white".to_string()}
-        else if self.color == "white" {self.color = "darkgray".to_string()}
-        else if self.color == "darkgray" {self.color = "gray".to_string()}
-        else if self.color == "gray" {self.color = "red".to_string()}
-        else if self.color == "red" {self.color = "lightred".to_string()}
-        else if self.color == "lightred" {self.color = "green".to_string()}
-        else if self.color == "green" {self.color = "lightgreen".to_string()}
-        else if self.color == "lightgreen" {self.color = "blue".to_string()}
-        else if self.color == "blue" {self.color = "lightblue".to_string()}
-        else if self.color == "lightblue" {self.color = "magenta".to_string()}
-        else if self.color == "magenta" {self.color = "lightmagenta".to_string()}
-        else if self.color == "lightmagenta" {self.color = "cyan".to_string()}
-        else if self.color == "cyan" {self.color = "lightcyan".to_string()}
-        else if self.color == "lightcyan" {self.color = "yellow".to_string()}
+        if self.color == "yellow" {
+            self.color = "lightyellow".to_string()
+        } else if self.color == "lightyellow" {
+            self.color = "white".to_string()
+        } else if self.color == "white" {
+            self.color = "darkgray".to_string()
+        } else if self.color == "darkgray" {
+            self.color = "gray".to_string()
+        } else if self.color == "gray" {
+            self.color = "red".to_string()
+        } else if self.color == "red" {
+            self.color = "lightred".to_string()
+        } else if self.color == "lightred" {
+            self.color = "green".to_string()
+        } else if self.color == "green" {
+            self.color = "lightgreen".to_string()
+        } else if self.color == "lightgreen" {
+            self.color = "blue".to_string()
+        } else if self.color == "blue" {
+            self.color = "lightblue".to_string()
+        } else if self.color == "lightblue" {
+            self.color = "magenta".to_string()
+        } else if self.color == "magenta" {
+            self.color = "lightmagenta".to_string()
+        } else if self.color == "lightmagenta" {
+            self.color = "cyan".to_string()
+        } else if self.color == "cyan" {
+            self.color = "lightcyan".to_string()
+        } else if self.color == "lightcyan" {
+            self.color = "yellow".to_string()
+        }
     }
 
     pub fn previous_color(&mut self) {
-        if self.color == "yellow" { self.color = "lightcyan".to_string() }
-        else if self.color == "lightcyan" { self.color = "cyan".to_string() }
-        else if self.color == "cyan" { self.color = "lightmagenta".to_string() }
-        else if self.color == "lightmagenta" { self.color = "magenta".to_string() }
-        else if self.color == "magenta" { self.color = "lightblue".to_string() }
-        else if self.color == "lightblue" { self.color = "blue".to_string() }
-        else if self.color == "blue" { self.color = "lightgreen".to_string() }
-        else if self.color == "lightgreen" { self.color = "green".to_string() }
-        else if self.color == "green" { self.color = "lightred".to_string() }
-        else if self.color == "lightred" { self.color = "red".to_string() }
-        else if self.color == "red" { self.color = "gray".to_string() }
-        else if self.color == "gray" { self.color = "darkgray".to_string() }
-        else if self.color == "darkgray" { self.color = "white".to_string() }
-        else if self.color == "white" { self.color = "lightyellow".to_string() }
-        else if self.color == "lightyellow" { self.color = "yellow".to_string() }
+        if self.color == "yellow" {
+            self.color = "lightcyan".to_string()
+        } else if self.color == "lightcyan" {
+            self.color = "cyan".to_string()
+        } else if self.color == "cyan" {
+            self.color = "lightmagenta".to_string()
+        } else if self.color == "lightmagenta" {
+            self.color = "magenta".to_string()
+        } else if self.color == "magenta" {
+            self.color = "lightblue".to_string()
+        } else if self.color == "lightblue" {
+            self.color = "blue".to_string()
+        } else if self.color == "blue" {
+            self.color = "lightgreen".to_string()
+        } else if self.color == "lightgreen" {
+            self.color = "green".to_string()
+        } else if self.color == "green" {
+            self.color = "lightred".to_string()
+        } else if self.color == "lightred" {
+            self.color = "red".to_string()
+        } else if self.color == "red" {
+            self.color = "gray".to_string()
+        } else if self.color == "gray" {
+            self.color = "darkgray".to_string()
+        } else if self.color == "darkgray" {
+            self.color = "white".to_string()
+        } else if self.color == "white" {
+            self.color = "lightyellow".to_string()
+        } else if self.color == "lightyellow" {
+            self.color = "yellow".to_string()
+        }
+    }
+
+    pub fn sort(&mut self, column: String) {
+        match column.as_str() {
+            "name" => self
+                .ssh_connections
+                .sort_by_key(|connection| connection.server_name.clone()),
+            "group" => self
+                .ssh_connections
+                .sort_by_key(|connection| connection.group_name.clone()),
+            "username" => self
+                .ssh_connections
+                .sort_by_key(|connection| connection.username.clone()),
+            "hostname" => self
+                .ssh_connections
+                .sort_by_key(|connection| connection.hostname.clone()),
+            "port" => self.ssh_connections.sort_by_key(|connection| connection.port.clone()),
+            _ => (),
+        }
     }
 }
 
@@ -556,7 +619,10 @@ fn read_config() -> Vec<SSHConnection> {
         Ok(data) => data,
         Err(text) => {
             ratatui::restore();
-            eprintln!("Error: Configuration file is invalid. Check the syntax in {}", &config_path.display());
+            eprintln!(
+                "Error: Configuration file is invalid. Check the syntax in {}",
+                &config_path.display()
+            );
             eprintln!("Details: {}", text);
             execute!(stdout(), Show).ok();
             std::process::exit(1);
@@ -630,12 +696,13 @@ pub fn run_popup_area(area: Rect) -> Rect {
 
 fn check_openssh() -> bool {
     match Command::new("ssh")
-    .arg("-v")
-    .stdout(Stdio::null())
-    .stderr(Stdio::null())
-    .status() {
+        .arg("-v")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+    {
         Ok(_) => true,
-        Err(_) => false
+        Err(_) => false,
     }
 }
 

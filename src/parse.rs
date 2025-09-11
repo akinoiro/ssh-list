@@ -1,7 +1,7 @@
 use crate::*;
+use glob::glob;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use glob::glob;
 use std::path::Path;
 
 #[derive(PartialEq, Clone)]
@@ -53,7 +53,7 @@ pub fn import_config(app: &mut App) {
     parse_from_ssh(names, &mut sshconfig);
 
     compare_with_defaults(&mut sshconfig, default_output_object);
-    add_to_appconfig(sshconfig,app);
+    add_to_appconfig(sshconfig, app);
     App::update_config(app);
     app.table_state.select(Some(app.ssh_connections.len()));
     app.scroll_state = app.scroll_state.position(app.ssh_connections.len());
@@ -104,10 +104,7 @@ fn get_names(names: &mut Vec<String>, config: BufReader<File>) {
         match line_result {
             Ok(line) => {
                 let line = line.trim().replace("=", " ");
-                if !line.is_empty()
-                    && !line.starts_with('#')
-                    && line.to_lowercase().starts_with("host ")
-                {
+                if !line.is_empty() && !line.starts_with('#') && line.to_lowercase().starts_with("host ") {
                     let line = line.split_whitespace();
                     for part in line {
                         if !part.contains("*") && part.to_lowercase() != "host" {
@@ -123,11 +120,7 @@ fn get_names(names: &mut Vec<String>, config: BufReader<File>) {
 
 fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) {
     for name in &names {
-        let output = Command::new("ssh")
-            .arg("-G")
-            .arg(name)
-            .output()
-            .expect("Error");
+        let output = Command::new("ssh").arg("-G").arg(name).output().expect("Error");
         let output = std::str::from_utf8(&output.stdout).expect("Error");
 
         let mut connection = SSHConfigConnection {
@@ -155,7 +148,6 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
             controlpath: String::new(),
             controlpersist: String::new(),
             compression: String::new(),
-
         };
 
         for mut line in output.lines() {
@@ -184,7 +176,9 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                 line.next();
                 let port = line.next().unwrap_or_default();
                 let address = line.next().unwrap_or_default();
-                connection.options.push_str(format!("-L {}:{} ", port, address).as_str());
+                connection
+                    .options
+                    .push_str(format!("-L {}:{} ", port, address).as_str());
             }
             if line.starts_with("remoteforward ") {
                 if !line.contains("[socks]:0") {
@@ -192,14 +186,15 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                     line.next();
                     let port = line.next().unwrap_or_default();
                     let address = line.next().unwrap_or_default();
-                    connection.options.push_str(format!("-R {}:{} ", port, address).as_str());
+                    connection
+                        .options
+                        .push_str(format!("-R {}:{} ", port, address).as_str());
                 } else {
                     let mut line = line.split_whitespace();
                     line.next();
                     let port = line.next().unwrap_or_default();
                     connection.options.push_str(format!("-R {} ", port).as_str());
                 }
-                
             }
             if line.starts_with("dynamicforward ") {
                 let arg = line.replace("dynamicforward ", "-D ");
@@ -296,16 +291,12 @@ fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) 
                 connection.compression.push_str(&arg);
                 connection.compression.push(' ');
             }
-
         }
         sshconfig.push(connection);
     }
 }
 
-fn compare_with_defaults(
-    sshconfig: &mut Vec<SSHConfigConnection>,
-    default_output_object: SSHConfigConnection,
-) {
+fn compare_with_defaults(sshconfig: &mut Vec<SSHConfigConnection>, default_output_object: SSHConfigConnection) {
     for i in sshconfig {
         if i.identityfile == default_output_object.identityfile {
             i.identityfile = String::new();
@@ -375,7 +366,8 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
             username: c.username,
             hostname: c.hostname,
             port: c.port,
-            options: format!("{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
+            options: format!(
+                "{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
                 c.options,
                 c.identityfile,
                 c.identitiesonly,
@@ -396,7 +388,7 @@ fn add_to_appconfig(sshconfig: Vec<SSHConfigConnection>, app: &mut App) {
                 c.controlpath,
                 c.controlpersist,
                 c.compression,
-            )
+            ),
         };
         app.ssh_connections.push(import);
     }
@@ -407,13 +399,11 @@ fn get_includes(ssh_config_paths: &mut Vec<PathBuf>, config: BufReader<File>) {
         match line_result {
             Ok(line) => {
                 let homedir = env::home_dir().unwrap();
-                let line = line.trim()
-                .replace("=", " ")
-                .replace("~", &homedir.display().to_string());
-                if !line.is_empty()
-                    && !line.starts_with('#')
-                    && line.to_lowercase().starts_with("include ")
-                {
+                let line = line
+                    .trim()
+                    .replace("=", " ")
+                    .replace("~", &homedir.display().to_string());
+                if !line.is_empty() && !line.starts_with('#') && line.to_lowercase().starts_with("include ") {
                     let line = line.split_whitespace();
                     for part in line {
                         if part.to_lowercase() != "include" {
@@ -425,8 +415,9 @@ fn get_includes(ssh_config_paths: &mut Vec<PathBuf>, config: BufReader<File>) {
                                             Err(e) => println!("{:?}", e),
                                         }
                                     }
+                                } else {
+                                    ssh_config_paths.push(PathBuf::from(part))
                                 }
-                                else {ssh_config_paths.push(PathBuf::from(part))}
                             } else if !Path::new(part).is_absolute() {
                                 let part = format!("{}/.ssh/{}", homedir.display(), part);
                                 if part.contains("*") {
@@ -436,8 +427,9 @@ fn get_includes(ssh_config_paths: &mut Vec<PathBuf>, config: BufReader<File>) {
                                             Err(e) => println!("{:?}", e),
                                         }
                                     }
+                                } else {
+                                    ssh_config_paths.push(PathBuf::from(part))
                                 }
-                                else {ssh_config_paths.push(PathBuf::from(part))}
                             }
                         }
                     }
