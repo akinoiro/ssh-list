@@ -568,16 +568,16 @@ impl App {
         match column.as_str() {
             "name" => self
                 .ssh_connections
-                .sort_by_key(|connection| connection.server_name.clone()),
+                .sort_by_key(|connection| connection.server_name.to_lowercase().clone()),
             "group" => self
                 .ssh_connections
-                .sort_by_key(|connection| connection.group_name.clone()),
+                .sort_by_key(|connection| connection.group_name.to_lowercase().clone()),
             "username" => self
                 .ssh_connections
-                .sort_by_key(|connection| connection.username.clone()),
+                .sort_by_key(|connection| connection.username.to_lowercase().clone()),
             "hostname" => self
                 .ssh_connections
-                .sort_by_key(|connection| connection.hostname.clone()),
+                .sort_by_key(|connection| connection.hostname.to_lowercase().clone()),
             "port" => self.ssh_connections.sort_by_key(|connection| connection.port.clone()),
             _ => (),
         }
