@@ -578,7 +578,7 @@ impl App {
             "hostname" => self
                 .ssh_connections
                 .sort_by_key(|connection| connection.hostname.to_lowercase().clone()),
-            "port" => self.ssh_connections.sort_by_key(|connection| connection.port.clone()),
+            "port" => self.ssh_connections.sort_by_key(|connection| connection.port.parse::<u16>().unwrap_or_default().clone()),
             _ => (),
         }
     }
