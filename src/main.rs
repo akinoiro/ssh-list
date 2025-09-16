@@ -19,6 +19,14 @@ use std::{env, fs};
 use tui_input::Input;
 
 fn main() -> std::io::Result<()> {
+    let version = env!("CARGO_PKG_VERSION");
+    let version_arg = "--version".to_string();
+    let args: Vec<String> = env::args().collect();
+    if args.last().unwrap() == &version_arg {
+        println!("ssh-list {}",version);
+        return Ok(());
+    }
+
     let terminal = ratatui::init();
     let app_result = App::new().run(terminal);
     ratatui::restore();
