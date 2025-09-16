@@ -93,7 +93,7 @@ pub enum AppMode {
     Error,
     RunCommand,
     Search,
-    Settings,
+    Options,
     Sort,
 }
 
@@ -105,7 +105,7 @@ pub struct App {
     show_import_popup: bool,
     show_error_popup: bool,
     show_run_popup: bool,
-    show_settings_popup: bool,
+    show_options_popup: bool,
     focus: Focus,
     field_inputs: FieldInputs,
     run_input: Input,
@@ -129,7 +129,7 @@ impl App {
             show_import_popup: false,
             show_error_popup: false,
             show_run_popup: false,
-            show_settings_popup: false,
+            show_options_popup: false,
             focus: Focus::ServerNameField,
             field_inputs: FieldInputs {
                 server_name_input: Input::default(),
@@ -213,8 +213,8 @@ impl App {
             ui::render_run_popup(self, frame, rects_v[0]);
         }
 
-        if self.show_settings_popup {
-            ui::render_settings_popup(frame, rects_v[0]);
+        if self.show_options_popup {
+            ui::render_options_popup(frame, rects_v[0]);
         }
     }
 
@@ -722,7 +722,7 @@ pub fn search_area(area: Rect) -> Rect {
     area
 }
 
-pub fn settings_popup_area(area: Rect) -> Rect {
+pub fn options_popup_area(area: Rect) -> Rect {
     let vertical = Layout::vertical([Constraint::Length(7)]).flex(Flex::Center);
     let horizontal = Layout::horizontal([Constraint::Length(46)]).flex(Flex::Center);
     let [area] = vertical.areas(area);

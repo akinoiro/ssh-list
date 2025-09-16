@@ -103,7 +103,7 @@ pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
             if app.ssh_connections.is_empty() {
                 "[A] add | [I] import | [Esc] quit"
             } else {
-                "[Enter] connect | [R] run  | [/] search | [I] import | [O] settings | [Esc] quit  \n    [A] add     | [E] edit | [C] copy   | [M] move   | [S] sort     | [Del] delete"
+                "[Enter] connect | [R] run  | [/] search | [I] import | [O] options | [Esc] quit  \n    [A] add     | [E] edit | [C] copy   | [M] move   | [S] sort    | [Del] delete"
             }
         }
         AppMode::New => "[Enter] save | [Esc] cancel",
@@ -113,7 +113,7 @@ pub fn render_footer(app: &mut App, frame: &mut Frame, area: Rect) {
         AppMode::Error => "[Esc] back",
         AppMode::RunCommand => "[Enter] run command | [Esc] back",
         AppMode::Search => "[Enter] connect | [Ctrl+R] run | [Ctrl+E] edit | [Del] delete | [Esc] back",
-        AppMode::Settings => "[↑][↓] height | [←][→] color | [Esc] back",
+        AppMode::Options => "[↑][↓] height | [←][→] color | [Esc] back",
         AppMode::Sort => "[n] name | [g] group | [u] username | [h] hostname | [p] port | [Esc] back",
     };
     let app_color = Color::from_str(&app.color).unwrap_or(Color::Yellow);
@@ -189,7 +189,7 @@ pub fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
     if app.app_mode == AppMode::Normal
         || app.app_mode == AppMode::New
         || app.app_mode == AppMode::Move
-        || app.app_mode == AppMode::Settings
+        || app.app_mode == AppMode::Options
         || app.app_mode == AppMode::Import
         || app.app_mode == AppMode::Sort
     {
@@ -326,10 +326,10 @@ pub fn render_search(app: &mut App, frame: &mut Frame, area: Rect) {
     );
 }
 
-pub fn render_settings_popup(frame: &mut Frame, area: Rect) {
-    let title_text = " Settings ";
+pub fn render_options_popup(frame: &mut Frame, area: Rect) {
+    let title_text = " Options ";
     let popup_block = Block::bordered().title(title_text).title_alignment(Alignment::Center);
-    let area = settings_popup_area(area);
+    let area = options_popup_area(area);
     let inner = popup_block.inner(area);
     frame.render_widget(Clear, area);
     frame.render_widget(popup_block, area);

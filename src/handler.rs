@@ -79,8 +79,8 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 app.search();
             }
             KeyCode::Char('O' | 'o' | 'Щ' | 'щ') => {
-                app.app_mode = AppMode::Settings;
-                app.show_settings_popup = true;
+                app.app_mode = AppMode::Options;
+                app.show_options_popup = true;
             }
             KeyCode::Char('S' | 's' | 'Ы' | 'ы') => {
                 app.app_mode = AppMode::Sort;
@@ -322,10 +322,10 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent) -> bool {
                 _ => (),
             },
         },
-        AppMode::Settings => match key.code {
+        AppMode::Options => match key.code {
             KeyCode::Esc => {
                 app.app_mode = AppMode::Normal;
-                app.show_settings_popup = false;
+                app.show_options_popup = false;
             }
             KeyCode::Up => {
                 app.row_height = 3;
