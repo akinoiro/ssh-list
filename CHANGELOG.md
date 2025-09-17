@@ -1,9 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.5.0] - 2025-09-17
 ### Added
 - Sorting
+- Parse all ssh config options
 - Ability to change the application's accent color
 - Ability to change row height
 

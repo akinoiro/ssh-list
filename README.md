@@ -3,11 +3,11 @@ SSH connection manager with a TUI interface.
 
 ![demo gif](https://raw.githubusercontent.com/akinoiro/ssh-list/main/images/demo.gif)
 
-Key features:
+Key Features:
 - Add and edit connections
-- Rearrange connections
+- Rearrange and sort connections
 - Import hosts from ~/.ssh/config
-- Search connections
+- Search and filter connections
 - Execute commands on remote hosts
 
 This application does not modify your existing SSH configuration files. Host settings can be spread across multiple files referenced by Include directives (and between system and user configs), so automatic editing is unreliable.
@@ -50,7 +50,14 @@ cargo build --release
 ```
 The binary will be located at target/release/
 ## Configuration files
-On the first run, ssh-list will automatically create a file to store your connections:
+ssh-list automatically creates files to store your connections:
 ```
 ~/.ssh/ssh-list.json
 ```
+and application settings:
+```
+~/.ssh/ssh-list_config.toml
+```
+## Appearance customization
+
+![demo settingsgif](https://raw.githubusercontent.com/akinoiro/ssh-list/main/images/demo_settings.gif)
