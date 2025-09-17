@@ -277,7 +277,7 @@ pub fn render_config_popup(frame: &mut Frame, area: Rect) {
     let info_footer = Paragraph::new(text1).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[1]);
 
-    let text2 = "The username, hostname, port, and some\nnon-default options will be imported";
+    let text2 = "The username, hostname, port, and \nnon-default options will be imported";
     let info_footer = Paragraph::new(text2).style(Style::new().fg(Color::White)).centered();
     frame.render_widget(info_footer, rects_popup[3]);
 }

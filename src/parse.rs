@@ -123,31 +123,57 @@ fn get_names(names: &mut Vec<String>, config: BufReader<File>) {
 
 fn parse_from_ssh(names: Vec<String>, sshconfig: &mut Vec<SSHConfigConnection>) {
     for name in &names {
-        let output = Command::new("ssh").arg("-G").arg(name).output().expect("Error");
-        let output = std::str::from_utf8(&output.stdout).expect("Error");
+        let output_raw = Command::new("ssh").arg("-G").arg(name).output().unwrap();
+        let output = std::str::from_utf8(&output_raw.stdout).unwrap();
+        let error = std::str::from_utf8(&output_raw.stderr).unwrap();
 
-        let mut connection = SSHConfigConnection {
-            server_name: name.to_string(),
-            username: String::new(),
-            hostname: String::new(),
-            port: String::new(),
-            options: vec![],
-        };
-
-        for line in output.lines() {
-            if let Some((key,value)) = line.trim().split_once(' ') {
-                let key = key.to_lowercase();
-                let value = value.to_string();
-                match key.as_str() {
-                    "host" => connection.server_name = value,
-                    "user" => connection.username = value,
-                    "hostname" => connection.hostname = value,
-                    "port" => connection.port = value,
-                    _ => connection.options.push((key, value))
+        if !error.contains("Cannot fork") {
+            let mut connection = SSHConfigConnection {
+                server_name: name.to_string(),
+                username: String::new(),
+                hostname: String::new(),
+                port: String::new(),
+                options: vec![],
+            };
+            for line in output.lines() {
+                if let Some((key,value)) = line.trim().split_once(' ') {
+                    let key = key.to_lowercase();
+                    let value = value.to_string();
+                    match key.as_str() {
+                        "host" => connection.server_name = value,
+                        "user" => connection.username = value,
+                        "hostname" => connection.hostname = value,
+                        "port" => connection.port = value,
+                        _ => connection.options.push((key, value))
+                    }
                 }
             }
+            sshconfig.push(connection);
+        } else {
+            let output = Command::new("ssh").arg("-G").arg(name).arg("uptime").output().unwrap();
+            let output = std::str::from_utf8(&output.stdout).unwrap();
+            let mut connection = SSHConfigConnection {
+                server_name: name.to_string(),
+                username: String::new(),
+                hostname: String::new(),
+                port: String::new(),
+                options: vec![],
+            };
+            for line in output.lines() {
+                if let Some((key,value)) = line.trim().split_once(' ') {
+                    let key = key.to_lowercase();
+                    let value = value.to_string();
+                    match key.as_str() {
+                        "host" => connection.server_name = value,
+                        "user" => connection.username = value,
+                        "hostname" => connection.hostname = value,
+                        "port" => connection.port = value,
+                        _ => connection.options.push((key, value))
+                    }
+                }
+            }
+            sshconfig.push(connection);
         }
-        sshconfig.push(connection);
     }
 }
 
