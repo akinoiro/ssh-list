@@ -41,6 +41,11 @@ sudo add-apt-repository ppa:akinoiro/ssh-list
 sudo apt update
 sudo apt install ssh-list
 ```
+## Install from Homebrew (macOS, Linux)
+```
+brew tap akinoiro/tap
+brew install ssh-list
+```
 ## Build from source
 You will need Rust and Cargo installed.
 ```
