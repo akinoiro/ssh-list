@@ -106,7 +106,7 @@ fn get_names(names: &mut Vec<String>, config: BufReader<File>) {
     for line_result in config.lines() {
         match line_result {
             Ok(line) => {
-                let line = line.trim().replace("=", " ");
+                let line = line.split('#').next().unwrap().trim().replace("=", " ");
                 if !line.is_empty() && !line.starts_with('#') && line.to_lowercase().starts_with("host ") {
                     let line = line.split_whitespace();
                     for part in line {
