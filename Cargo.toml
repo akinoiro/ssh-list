@@ -1,15 +1,12 @@
 [package]
 name = "ssh-list"
 description = "SSH connection manager with a TUI interface"
-version = "1.5.0"
+version = "1.5.1"
 authors = ["akinoiro"]
 edition = "2021"
 license = "GPL-3.0"
 repository = "https://github.com/akinoiro/ssh-list"
-categories = [
-    "command-line-utilities",
-    "development-tools"
-]
+categories = ["command-line-utilities"]
 keywords = ["tui", "ssh"]
 readme = "README.md"
 exclude = [".github/"]
